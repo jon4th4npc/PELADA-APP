@@ -1,170 +1,76 @@
-# Pelada — projeto pronto para GitHub + Supabase
+# PELADA APP — GitHub Pages + Supabase
 
-Você mesmo fará o upload. Este pacote não cria nem altera nada na sua conta.
+Sistema público para acompanhar a pelada pelo celular ou computador.
 
-## O que já está pronto
+## Menus
 
-- site público somente leitura;
-- área Admin;
-- 4 usuários: JONATHAN, JULIO, CAUE e EDSON;
-- importação semanal por texto, no mesmo formato que você costuma enviar;
-- 5 times / 5 jogadores;
-- geração automática das 10 partidas de 8min30s;
-- classificação automática: PTS → SG → GP → confronto direto;
-- final de 10 minutos entre 1º e 2º;
-- lançamento de gols e assistências por jogador em cada partida;
-- artilharia e ranking de assistências;
-- histórico de peladas;
-- RLS no Supabase: público só lê; somente os 4 admins alteram.
-
-## 1. Criar o projeto no Supabase
-
-Crie um projeto no Supabase.
-
-Abra:
-SQL Editor → New query
-
-Cole e execute todo o conteúdo de:
-
-`supabase/schema.sql`
-
-## 2. Criar os quatro usuários
-
-No Supabase:
-
-Authentication → Users → Add user
-
-Crie estes e-mails internos:
-
-- `jonathan@pelada.local`
-- `julio@pelada.local`
-- `caue@pelada.local`
-- `edson@pelada.local`
-
-Defina para os quatro a senha que você escolheu.
-
-Na tela do site eles não digitam esses e-mails.
-Eles escolhem apenas JONATHAN, JULIO, CAUE ou EDSON.
-
-### Importante
-
-Em Authentication, deixe o cadastro público de novos usuários desativado.
-
-A senha NÃO está gravada no código e NÃO deve ser colocada no GitHub.
-
-## 3. Configurar o frontend
-
-No Supabase:
-
-Project Settings → API
-
-Copie:
-
-- Project URL
-- anon key / publishable key
-
-Abra `config.js` e substitua:
-
-`COLE_AQUI_SUA_SUPABASE_URL`
-
-e
-
-`COLE_AQUI_SUA_SUPABASE_ANON_KEY`
-
-A anon/publishable key pode ficar no frontend.
-NUNCA coloque a `service_role` no GitHub.
-
-## 4. Subir no GitHub
-
-Crie um repositório e envie estes arquivos:
-
-- `index.html`
-- `styles.css`
-- `app.js`
-- `config.js`
-- `README.md`
-- pasta `supabase` (opcional para o site, mas recomendado para guardar o SQL)
-
-## 5. Ativar GitHub Pages
-
-No repositório:
-
-Settings → Pages
-
-Source:
-`Deploy from a branch`
-
-Branch:
-`main`
-
-Folder:
-`/ (root)`
-
-Salve.
-
-O GitHub fornecerá o link público do sistema.
-
-## 6. Uso semanal
-
-Admin → login.
-
-Cole algo assim:
-
-1 - Boca Juniors
-1. Edson Luna
-2. tiago ceifador
-3. coquinha
-4. Luis Felipe
-5. Davi Pessoa
-
-2 - River Plate
-1. IG
-2. JV
-3. Rafael Pessoa
-4. Lyndemarques
-5. Julião
-
-... até o quinto time.
-
-Clique:
-
-`Conferir lista`
-
-Depois:
-
-`Criar pelada`
-
-O sistema gera as 10 partidas.
-
-## 7. Gols e assistências
-
-Depois de lançar o placar, clique em:
-
-`Gols e assistências`
-
-Aparecem somente os jogadores dos dois times daquela partida.
-
-Você informa:
-- gols;
-- assistências.
-
-O sistema soma automaticamente a artilharia e o ranking de assistências.
-
-## 8. Acesso público
-
-Qualquer pessoa com o link poderá consultar:
-- jogos;
+### Partidas
+- partidas classificatórias;
 - placares;
 - classificação;
-- final;
-- campeão;
-- gols;
-- assistências;
-- histórico.
+- final de 10 minutos;
+- público pode consultar sem login;
+- somente admins conseguem alterar.
 
-Sem login, os campos ficam bloqueados e o banco também impede alterações por RLS.
+### Estatísticas
+- artilharia da pelada selecionada;
+- assistências da pelada selecionada;
+- artilharia geral somando todas as peladas;
+- assistências gerais somando todas as peladas;
+- times e jogadores da rodada.
 
-## Observação sobre escudos
+### Histórico
+- lista as peladas anteriores;
+- qualquer visitante pode abrir e consultar uma rodada antiga.
 
-Esta primeira versão de hospedagem não busca escudos automaticamente, porque o clube muda semanalmente.
-A estrutura pode ser ampliada com um catálogo de clubes + escudos no Supabase Storage, para você cadastrar o escudo uma vez e ele reaparecer automaticamente sempre que o mesmo clube for usado.
+### Criar Pelada
+- aparece somente depois do login de administrador;
+- permite colar a lista semanal no mesmo formato de sempre;
+- valida os 5 times e jogadores;
+- gera automaticamente as 10 partidas.
+
+## Administradores
+
+A tela mostra somente:
+- JONATHAN
+- JULIO
+- CAUE
+- EDSON
+
+Os e-mails internos de autenticação permanecem configurados no código e as senhas ficam somente no Supabase Auth.
+
+## Acesso público
+
+Não existe login obrigatório para visitantes.
+
+Ao abrir o link do GitHub Pages, a pessoa entra diretamente como:
+
+`Público • somente leitura`
+
+Ela pode navegar em Partidas, Estatísticas e Histórico. O banco também bloqueia escrita pública por RLS, portanto não é apenas uma restrição visual.
+
+## Visual para celular
+
+Em telas pequenas, o sistema usa:
+- cabeçalho compacto;
+- cards de partidas em uma coluna;
+- placares maiores para toque;
+- menu fixo na parte inferior, estilo aplicativo;
+- classificação com rolagem horizontal;
+- final e rankings adaptados à largura do celular.
+
+## Escudos
+
+A pasta `logos` contém escudos locais usados anteriormente, incluindo Boca Juniors, River Plate, Platense, Estudiantes, Rivadavia, Barcelona, Real Madrid, Valencia, Atlético de Madrid e Real Betis.
+
+Além disso, o sistema tenta carregar automaticamente um catálogo online com mais de 100 clubes das principais ligas europeias. Se um time não for encontrado, aparecem as iniciais do clube no lugar do escudo, sem quebrar o sistema.
+
+## Atualização no GitHub
+
+Para esta atualização, substitua no repositório:
+- `index.html`
+- `app.js`
+- `styles.css`
+- pasta `logos`
+
+Não substitua seu `config.js`, porque ele contém a URL e a Publishable Key do seu projeto Supabase.

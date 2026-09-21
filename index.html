@@ -3,26 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111827">
+  <meta name="theme-color" content="#0b4d2b">
   <title>Pelada</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="topbar">
-  <div><h1>⚽ Pelada</h1><p>Acompanhe jogos, classificação e estatísticas.</p></div>
-  <div class="top-actions">
-    <button id="historyBtn" class="secondary">Histórico</button>
-    <button id="adminBtn" class="secondary">Admin</button>
-    <button id="logoutBtn" class="danger hidden">Sair</button>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand-wrap">
+      <div class="brand-ball">⚽</div>
+      <div>
+        <h1>PELADA</h1>
+        <p>Resultados, classificação e resenha em um só lugar</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="modeBadge" class="mode-pill">Público</span>
+      <button id="adminBtn" class="outline-light">🔐 Admin</button>
+      <button id="logoutBtn" class="danger-light hidden">Sair</button>
+    </div>
   </div>
+
+  <nav class="main-nav" aria-label="Menu principal">
+    <button class="nav-item active" data-view="matches">⚽ <span>Partidas</span></button>
+    <button class="nav-item" data-view="stats">📊 <span>Estatísticas</span></button>
+    <button class="nav-item" data-view="history">🗓️ <span>Histórico</span></button>
+    <button id="navCreate" class="nav-item admin-only hidden" data-view="create">➕ <span>Criar Pelada</span></button>
+  </nav>
 </header>
 
 <main class="container">
   <section id="statusBox" class="notice hidden"></section>
 
-  <section id="loginCard" class="card hidden">
-    <h2>Área administrativa</h2>
-    <p class="muted">Somente administradores podem alterar informações.</p>
+  <section id="loginCard" class="card login-card hidden">
+    <div class="section-title-row">
+      <div class="section-icon">🔐</div>
+      <div><h2>Área administrativa</h2><p class="muted">Somente administradores podem alterar informações.</p></div>
+    </div>
     <div class="form-grid two">
       <label>Usuário
         <select id="loginUser">
@@ -40,79 +57,142 @@
     </div>
   </section>
 
-  <section id="adminPanel" class="card hidden">
-    <div class="section-head">
-      <div><h2>Nova pelada</h2><p class="muted">Cole a lista semanal exatamente no formato de sempre.</p></div>
-      <span id="adminBadge" class="badge"></span>
-    </div>
-    <div class="form-grid two">
-      <label>Data da pelada<input id="newDate" type="date"></label>
-      <label>Título<input id="newTitle" type="text" value="Pelada"></label>
-    </div>
-    <label>Lista dos times e jogadores
-      <textarea id="pasteList" rows="18" placeholder="1 - Boca Juniors&#10;1. Edson Luna&#10;2. tiago ceifador&#10;3. ...&#10;&#10;2 - River Plate&#10;1. ..."></textarea>
-    </label>
-    <div class="actions"><button id="previewImport">Conferir lista</button></div>
-    <div id="importPreview" class="hidden">
-      <h3>Conferência</h3>
-      <div id="previewTeams" class="team-grid"></div>
-      <div id="previewWarnings" class="notice warn hidden"></div>
-      <div class="actions">
-        <button id="createTournament">Criar pelada</button>
-        <button id="cancelPreview" class="secondary">Cancelar</button>
+  <!-- MENU: CRIAÇÃO DE PELADA -->
+  <section id="viewCreate" class="app-view hidden">
+    <section id="adminPanel" class="card admin-create-card">
+      <div class="pitch-banner">
+        <div>
+          <span class="eyebrow">ADMINISTRAÇÃO</span>
+          <h2>Nova Pelada</h2>
+          <p>Cole a escalação semanal no mesmo formato de sempre e o sistema monta tudo.</p>
+        </div>
+        <div class="pitch-ball">⚽</div>
       </div>
-    </div>
+
+      <div class="section-head compact-head">
+        <div><h3>Configuração da rodada</h3><p class="muted">5 times, 5 jogadores por time e 10 partidas classificatórias.</p></div>
+        <span id="adminBadge" class="badge"></span>
+      </div>
+
+      <div class="form-grid two">
+        <label>Data da pelada<input id="newDate" type="date"></label>
+        <label>Título<input id="newTitle" type="text" value="Pelada"></label>
+      </div>
+      <label>Lista dos times e jogadores
+        <textarea id="pasteList" rows="18" placeholder="1 - Boca Juniors&#10;1. Edson Luna&#10;2. tiago ceifador&#10;3. coquinha&#10;4. Luis Felipe&#10;5. Davi Pessoa&#10;&#10;2 - River Plate&#10;1. IG&#10;..."></textarea>
+      </label>
+      <div class="actions"><button id="previewImport">Conferir lista</button></div>
+
+      <div id="importPreview" class="hidden preview-block">
+        <h3>Conferência dos times</h3>
+        <div id="previewTeams" class="team-grid"></div>
+        <div id="previewWarnings" class="notice warn hidden"></div>
+        <div class="actions">
+          <button id="createTournament">Criar pelada</button>
+          <button id="cancelPreview" class="secondary">Cancelar</button>
+        </div>
+      </div>
+    </section>
   </section>
 
-  <section id="historyPanel" class="card hidden">
-    <div class="section-head">
-      <div><h2>Histórico</h2><p class="muted">Peladas anteriores permanecem disponíveis.</p></div>
-      <button id="closeHistory" class="secondary">Fechar</button>
-    </div>
-    <div id="historyList" class="history-list"></div>
+  <!-- MENU: PARTIDAS / CLASSIFICAÇÃO / FINAL -->
+  <section id="viewMatches" class="app-view">
+    <section id="tournamentPanel" class="hidden">
+      <section class="scoreboard-hero">
+        <div class="scoreboard-lines"></div>
+        <div class="scoreboard-content">
+          <div>
+            <span class="eyebrow light">RODADA ATUAL</span>
+            <h2 id="tournamentTitle">Pelada</h2>
+            <p id="tournamentDate"></p>
+          </div>
+          <div class="hero-ball">⚽</div>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <div class="section-head">
+          <div class="section-title-row">
+            <div class="section-icon green">⚽</div>
+            <div><h2>Partidas classificatórias</h2><p class="muted">10 partidas • 8min30s cada</p></div>
+          </div>
+          <div class="progress-pill"><span id="matchProgress">0/10</span> jogos</div>
+        </div>
+        <div id="matchesList" class="match-list"></div>
+      </section>
+
+      <section class="card section-card">
+        <div class="section-title-row">
+          <div class="section-icon gold">📊</div>
+          <div><h2>Classificação</h2><p class="muted">Pontos → Saldo de gols → Gols marcados → Confronto direto.</p></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>#</th><th>Time</th><th>PTS</th><th>SG</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th></tr></thead>
+          <tbody id="standingsBody"></tbody>
+        </table></div>
+      </section>
+
+      <section class="card section-card final-section">
+        <div class="section-title-row">
+          <div class="section-icon trophy">🏆</div>
+          <div><h2>Final • 10 minutos</h2><p class="muted">1º e 2º colocados disputam o título.</p></div>
+        </div>
+        <div id="finalBox"></div>
+      </section>
+    </section>
+
+    <section id="noTournament" class="empty-state hidden">
+      <div class="empty-ball">⚽</div>
+      <h2>Nenhuma pelada cadastrada</h2>
+      <p>Quando um administrador criar a primeira rodada, ela aparecerá aqui para todo mundo acompanhar.</p>
+    </section>
   </section>
 
-  <section id="tournamentPanel" class="hidden">
-    <section class="card hero">
-      <div class="section-head">
-        <div><h2 id="tournamentTitle">Pelada</h2><p id="tournamentDate" class="muted"></p></div>
-        <span id="modeBadge" class="badge">Público</span>
+  <!-- MENU: ARTILHARIA E ASSISTÊNCIAS -->
+  <section id="viewStats" class="app-view hidden">
+    <section class="card section-card">
+      <div class="section-title-row">
+        <div class="section-icon gold">🏆</div>
+        <div><h2>Artilharia e Assistências</h2><p class="muted">Acompanhe os destaques da semana e o ranking geral.</p></div>
+      </div>
+
+      <div class="stats-tabs">
+        <button class="stats-tab active" data-stats-view="week">Esta semana</button>
+        <button class="stats-tab" data-stats-view="general">Geral</button>
+      </div>
+
+      <div id="weeklyStatsPanel">
+        <div class="stats-grid">
+          <div class="stat-column"><h3>⚽ Artilharia da semana</h3><div id="goalsRanking"></div></div>
+          <div class="stat-column"><h3>🎯 Assistências da semana</h3><div id="assistsRanking"></div></div>
+        </div>
+      </div>
+
+      <div id="generalStatsPanel" class="hidden">
+        <div class="stats-grid">
+          <div class="stat-column"><h3>⚽ Artilharia geral</h3><div id="generalGoalsRanking"></div></div>
+          <div class="stat-column"><h3>🎯 Assistências geral</h3><div id="generalAssistsRanking"></div></div>
+        </div>
       </div>
     </section>
 
-    <section class="card">
-      <div class="section-head">
-        <div><h2>Partidas classificatórias</h2><p class="muted">10 partidas • 8min30s</p></div>
-        <strong id="matchProgress">0/10</strong>
+    <section class="card section-card">
+      <div class="section-title-row">
+        <div class="section-icon blue">👥</div>
+        <div><h2>Times e jogadores da rodada</h2><p class="muted">Escalação da pelada selecionada.</p></div>
       </div>
-      <div id="matchesList" class="match-list"></div>
-    </section>
-
-    <section class="card">
-      <h2>Classificação</h2>
-      <p class="muted">Pontos → Saldo de gols → Gols marcados → Confronto direto.</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>#</th><th>Time</th><th>PTS</th><th>SG</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th></tr></thead>
-        <tbody id="standingsBody"></tbody>
-      </table></div>
-    </section>
-
-    <section class="card">
-      <h2>Final • 10 minutos</h2>
-      <div id="finalBox"></div>
-    </section>
-
-    <section class="card">
-      <h2>Artilharia e assistências</h2>
-      <div class="stats-grid">
-        <div><h3>⚽ Gols</h3><div id="goalsRanking"></div></div>
-        <div><h3>🎯 Assistências</h3><div id="assistsRanking"></div></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Times e jogadores</h2>
       <div id="teamsList" class="team-grid"></div>
+    </section>
+  </section>
+
+  <!-- MENU: HISTÓRICO -->
+  <section id="viewHistory" class="app-view hidden">
+    <section id="historyPanel" class="card section-card">
+      <div class="section-title-row">
+        <div class="section-icon blue">🗓️</div>
+        <div><h2>Histórico de peladas</h2><p class="muted">Abra uma rodada anterior para consultar todos os resultados.</p></div>
+      </div>
+      <div id="historyList" class="history-list"></div>
     </section>
   </section>
 </main>

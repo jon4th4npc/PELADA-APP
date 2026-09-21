@@ -1,0 +1,28 @@
+ATUALIZACAO DO PELADA APP
+
+1. Extraia este ZIP.
+2. No GitHub, abra o repositorio PELADA-APP.
+3. Substitua:
+   - index.html
+   - app.js
+   - styles.css
+4. Envie/substitua a pasta logos.
+5. README.md e opcional.
+6. Faca o commit.
+7. Aguarde o GitHub Pages atualizar.
+
+IMPORTANTE:
+NAO substitua nem apague seu config.js atual.
+Nao precisa executar nenhum SQL novo no Supabase para esta atualizacao.
+
+NOVO:
+- menus separados;
+- acesso publico sem login;
+- criacao visivel apenas para admin;
+- Partidas + Classificacao + Final no mesmo menu;
+- Estatisticas da semana e geral;
+- Historico publico;
+- menu inferior no celular;
+- visual de campo/pelada;
+- escudos automaticos de mais de 100 clubes das principais ligas europeias,
+  com fallback para escudos locais ou iniciais.
