@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>Pelada</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div><h1>⚽ Pelada</h1><p>Acompanhe jogos, classificação e estatísticas.</p></div>
+  <div class="top-actions">
+    <button id="historyBtn" class="secondary">Histórico</button>
+    <button id="adminBtn" class="secondary">Admin</button>
+    <button id="logoutBtn" class="danger hidden">Sair</button>
+  </div>
+</header>
+
+<main class="container">
+  <section id="statusBox" class="notice hidden"></section>
+
+  <section id="loginCard" class="card hidden">
+    <h2>Área administrativa</h2>
+    <p class="muted">Somente administradores podem alterar informações.</p>
+    <div class="form-grid two">
+      <label>Usuário
+        <select id="loginUser">
+          <option>JONATHAN</option>
+          <option>JULIO</option>
+          <option>CAUE</option>
+          <option>EDSON</option>
+        </select>
+      </label>
+      <label>Senha<input id="loginPassword" type="password" autocomplete="current-password"></label>
+    </div>
+    <div class="actions">
+      <button id="loginSubmit">Entrar</button>
+      <button id="loginCancel" class="secondary">Cancelar</button>
+    </div>
+  </section>
+
+  <section id="adminPanel" class="card hidden">
+    <div class="section-head">
+      <div><h2>Nova pelada</h2><p class="muted">Cole a lista semanal exatamente no formato de sempre.</p></div>
+      <span id="adminBadge" class="badge"></span>
+    </div>
+    <div class="form-grid two">
+      <label>Data da pelada<input id="newDate" type="date"></label>
+      <label>Título<input id="newTitle" type="text" value="Pelada"></label>
+    </div>
+    <label>Lista dos times e jogadores
+      <textarea id="pasteList" rows="18" placeholder="1 - Boca Juniors&#10;1. Edson Luna&#10;2. tiago ceifador&#10;3. ...&#10;&#10;2 - River Plate&#10;1. ..."></textarea>
+    </label>
+    <div class="actions"><button id="previewImport">Conferir lista</button></div>
+    <div id="importPreview" class="hidden">
+      <h3>Conferência</h3>
+      <div id="previewTeams" class="team-grid"></div>
+      <div id="previewWarnings" class="notice warn hidden"></div>
+      <div class="actions">
+        <button id="createTournament">Criar pelada</button>
+        <button id="cancelPreview" class="secondary">Cancelar</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="historyPanel" class="card hidden">
+    <div class="section-head">
+      <div><h2>Histórico</h2><p class="muted">Peladas anteriores permanecem disponíveis.</p></div>
+      <button id="closeHistory" class="secondary">Fechar</button>
+    </div>
+    <div id="historyList" class="history-list"></div>
+  </section>
+
+  <section id="tournamentPanel" class="hidden">
+    <section class="card hero">
+      <div class="section-head">
+        <div><h2 id="tournamentTitle">Pelada</h2><p id="tournamentDate" class="muted"></p></div>
+        <span id="modeBadge" class="badge">Público</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><h2>Partidas classificatórias</h2><p class="muted">10 partidas • 8min30s</p></div>
+        <strong id="matchProgress">0/10</strong>
+      </div>
+      <div id="matchesList" class="match-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Classificação</h2>
+      <p class="muted">Pontos → Saldo de gols → Gols marcados → Confronto direto.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Time</th><th>PTS</th><th>SG</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GP</th><th>GC</th></tr></thead>
+        <tbody id="standingsBody"></tbody>
+      </table></div>
+    </section>
+
+    <section class="card">
+      <h2>Final • 10 minutos</h2>
+      <div id="finalBox"></div>
+    </section>
+
+    <section class="card">
+      <h2>Artilharia e assistências</h2>
+      <div class="stats-grid">
+        <div><h3>⚽ Gols</h3><div id="goalsRanking"></div></div>
+        <div><h3>🎯 Assistências</h3><div id="assistsRanking"></div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Times e jogadores</h2>
+      <div id="teamsList" class="team-grid"></div>
+    </section>
+  </section>
+</main>
+
+<dialog id="statsDialog">
+  <form method="dialog" class="dialog-box">
+    <div class="section-head">
+      <div><h2 id="statsTitle">Gols e assistências</h2><p id="statsSubtitle" class="muted"></p></div>
+      <button value="cancel" class="secondary">Fechar</button>
+    </div>
+    <div id="statsEditor"></div>
+    <div id="statsValidation" class="notice warn hidden"></div>
+    <div class="actions"><button id="saveStatsBtn" type="button">Salvar gols e assistências</button></div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
