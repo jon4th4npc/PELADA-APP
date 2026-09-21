@@ -89,6 +89,10 @@
       .replace(/\s+/g, " ");
   }
 
+  function playerDisplayName(name) {
+    return String(name || "").trim().replace(/\s+/g, " ").toLocaleUpperCase("pt-BR");
+  }
+
   function getLogoPath(teamOrName) {
     const name = typeof teamOrName === "string" ? teamOrName : teamOrName?.name;
     const key = normalizeTeamName(name);
@@ -207,7 +211,7 @@
 
       const pm = line.match(/^(\d+)\s*[.)]\s*(.+)$/);
       if (pm && current) {
-        current.players.push({ order:Number(pm[1]), name:pm[2].trim() });
+        current.players.push({ order:Number(pm[1]), name:playerDisplayName(pm[2]) });
         continue;
       }
 
@@ -226,7 +230,7 @@
     $("previewTeams").innerHTML = S.preview.map(t => `
       <div class="team-card">
         <h3 class="team-card-title">${teamLogo(t.name)}<span>${esc(t.name)}</span></h3>
-        <ol>${t.players.map(p => `<li>${esc(p.name)}</li>`).join("")}</ol>
+        <ol>${t.players.map(p => `<li>${esc(playerDisplayName(p.name))}</li>`).join("")}</ol>
       </div>
     `).join("");
 
@@ -381,6 +385,7 @@
     $("tournamentPanel").classList.remove("hidden");
     $("tournamentTitle").textContent = S.tournament.title || "Pelada";
     $("tournamentDate").textContent = fmtDate(S.tournament.event_date);
+    if ($("teamsWeekDate")) $("teamsWeekDate").textContent = `Segunda-feira • ${fmtDate(S.tournament.event_date)} • confira os times e jogadores da rodada.`;
 
     const groupMatches = S.matches.filter(m => m.stage === "group");
     const done = groupMatches.filter(m => m.home_score !== null && m.away_score !== null).length;
@@ -416,7 +421,7 @@
     $("teamsList").innerHTML = S.teams.map(t => `
       <div class="team-card">
         <h3 class="team-card-title">${teamLogo(t)}<span>${esc(t.name)}</span></h3>
-        <ol>${playersByTeam(t.id).map(p => `<li>${esc(p.name)}</li>`).join("")}</ol>
+        <ol>${playersByTeam(t.id).map(p => `<li>${esc(playerDisplayName(p.name))}</li>`).join("")}</ol>
       </div>
     `).join("");
 
@@ -473,7 +478,7 @@
     return `<div class="rank">${rows.map((r,i) => `
       <div class="rank-row ${i === 0 ? "leader" : ""}">
         <span class="rank-pos">${i + 1}</span>
-        <span class="rank-player"><b>${esc(r.player?.name || r.name)}</b>${showTeam && r.player ? `<small>${teamLogo(teamById(r.player.team_id),"tiny")}${esc(teamById(r.player.team_id)?.name || "")}</small>` : (r.weeks ? `<small>${r.weeks} ${r.weeks === 1 ? "pelada" : "peladas"}</small>` : "")}</span>
+        <span class="rank-player"><b>${esc(playerDisplayName(r.player?.name || r.name))}</b>${showTeam && r.player ? `<small>${teamLogo(teamById(r.player.team_id),"tiny")}${esc(teamById(r.player.team_id)?.name || "")}</small>` : (r.weeks ? `<small>${r.weeks} ${r.weeks === 1 ? "pelada" : "peladas"}</small>` : "")}</span>
         <strong class="rank-value">${r[key]}</strong>
       </div>`).join("")}</div>`;
   }
@@ -512,7 +517,7 @@
       const p = players.get(s.player_id);
       if (!p) continue;
       const key = normalizePlayerName(p.name);
-      if (!grouped.has(key)) grouped.set(key,{ name:p.name, goals:0, assists:0, tournaments:new Set() });
+      if (!grouped.has(key)) grouped.set(key,{ name:playerDisplayName(p.name), goals:0, assists:0, tournaments:new Set() });
       const row = grouped.get(key);
       row.goals += s.goals || 0;
       row.assists += s.assists || 0;
@@ -595,7 +600,7 @@
       const s = getStat(matchId,p.id);
       const team = teamById(p.team_id);
       return `<div class="player-stat-row">
-        <strong class="player-stat-name">${esc(p.name)}<small>${teamLogo(team,"tiny")}${esc(team?.name || "")}</small></strong>
+        <strong class="player-stat-name">${esc(playerDisplayName(p.name))}<small>${teamLogo(team,"tiny")}${esc(team?.name || "")}</small></strong>
         <label>Gols<input class="stat-goals" data-player="${p.id}" type="number" min="0" max="20" value="${s.goals || 0}"></label>
         <label>Assistências<input class="stat-assists" data-player="${p.id}" type="number" min="0" max="20" value="${s.assists || 0}"></label>
       </div>`;
@@ -673,7 +678,7 @@
     S.preview.forEach((t,i) => t.players.forEach((p,j) => playerRows.push({
       tournament_id:tournament.id,
       team_id:createdTeams[i].id,
-      name:p.name,
+      name:playerDisplayName(p.name),
       sort_order:j + 1
     })));
 
@@ -759,8 +764,56 @@
 
   $("saveStatsBtn").addEventListener("click",saveStats);
 
-  const today = new Date();
-  $("newDate").value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+  function toISODateLocal(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+  }
+
+  function nextOrCurrentMonday(base = new Date()) {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    const day = d.getDay();
+    const add = day === 1 ? 0 : (8 - day) % 7;
+    d.setDate(d.getDate() + add);
+    return d;
+  }
+
+  function setupMondaySchedule() {
+    const select = $("mondayPreset");
+    const input = $("newDate");
+    if (!select || !input) return;
+
+    const today = new Date();
+    const first = nextOrCurrentMonday(today);
+    const todayIso = toISODateLocal(today);
+    const options = [];
+
+    for (let i = 0; i < 16; i++) {
+      const d = new Date(first);
+      d.setDate(first.getDate() + i * 7);
+      const iso = toISODateLocal(d);
+      const label = fmtDate(iso) + (iso === todayIso ? " • HOJE" : i === 0 ? " • PRÓXIMA" : "");
+      options.push(`<option value="${iso}">${label}</option>`);
+    }
+
+    select.innerHTML = options.join("");
+    input.value = select.value;
+
+    select.addEventListener("change", () => {
+      input.value = select.value;
+    });
+
+    input.addEventListener("change", () => {
+      const date = new Date(`${input.value}T12:00:00`);
+      if (!input.value || Number.isNaN(date.getTime())) return;
+      if (date.getDay() !== 1) {
+        status("A pelada normalmente acontece na segunda-feira. Mantive a data porque você pode ter uma exceção.", "warn");
+      }
+      const exists = [...select.options].some(o => o.value === input.value);
+      if (exists) select.value = input.value;
+      else select.selectedIndex = -1;
+    });
+  }
+
+  setupMondaySchedule();
 
   sb.auth.onAuthStateChange((_event,session) => {
     S.session = session;

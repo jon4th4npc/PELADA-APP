@@ -122,3 +122,50 @@ dialog{border:0;border-radius:18px;padding:0;max-width:880px;width:calc(100% - 2
   .match-row{grid-template-columns:minmax(0,1fr) 44px 12px 44px minmax(0,1fr)}.team-name{font-size:9px;max-width:74px}.team-logo{width:29px;height:29px;flex-basis:29px}.score,.score-display{font-size:17px}
   .section-head{gap:7px}.progress-pill{font-size:9px;padding:6px 8px}.progress-pill span{font-size:13px}
 }
+
+/* Agenda semanal da pelada */
+.weekly-schedule-box{
+  display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 14px;
+  border:1px solid rgba(22,101,52,.22);border-radius:14px;background:linear-gradient(135deg,#ecfdf5,#f0fdf4)
+}
+.weekly-schedule-icon{font-size:28px;line-height:1}
+.weekly-schedule-box strong{display:block;font-size:14px;color:#14532d}
+.weekly-schedule-box p{margin:3px 0 0;font-size:12px;color:#4b5563;line-height:1.35}
+.schedule-grid{grid-template-columns:1.2fr 1fr 1fr}
+.field-help{display:block;margin-top:5px;color:#6b7280;font-size:11px;font-weight:400;line-height:1.3}
+@media(max-width:720px){
+  .schedule-grid{grid-template-columns:1fr}
+  .weekly-schedule-box{align-items:flex-start}
+}
+
+/* TIMES DA SEMANA */
+.teams-week-hero{
+  position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  margin-bottom:12px;padding:20px 22px;border-radius:18px;color:#fff;
+  background:linear-gradient(135deg,#0b5a32,#0f7a43 60%,#0a4a2b);
+  box-shadow:0 10px 28px rgba(10,74,43,.16)
+}
+.teams-week-hero:before,.teams-week-hero:after{content:"";position:absolute;border:2px solid rgba(255,255,255,.12);border-radius:50%}
+.teams-week-hero:before{width:150px;height:150px;right:-55px;top:-62px}.teams-week-hero:after{width:90px;height:90px;right:28px;bottom:-58px}
+.teams-week-hero h2{margin:2px 0 4px;font-size:26px}.teams-week-hero p{margin:0;color:rgba(255,255,255,.82);font-size:13px}
+.teams-week-icon{position:relative;z-index:1;font-size:48px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.18))}
+.teams-week-grid .team-card{position:relative;overflow:hidden;border-top:4px solid #146b3a}
+.teams-week-grid .team-card ol{padding-left:0;list-style:none;counter-reset:jogador}
+.teams-week-grid .team-card li{counter-increment:jogador;display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #edf1ee;font-weight:800;font-size:13px;text-transform:uppercase}
+.teams-week-grid .team-card li:last-child{border-bottom:0}
+.teams-week-grid .team-card li:before{content:counter(jogador);width:23px;height:23px;flex:0 0 23px;border-radius:50%;display:grid;place-items:center;background:#e9f5ed;color:#0b5a32;font-size:10px;font-weight:900}
+.player-stat-name,.rank-player>b{text-transform:uppercase}
+
+@media(max-width:760px){
+  .main-nav{grid-template-columns:repeat(4,1fr)}
+  .main-nav:has(.admin-only:not(.hidden)){grid-template-columns:repeat(5,1fr)}
+  .nav-item,.nav-item.admin-only{min-height:58px;font-size:17px;padding:5px 2px}
+  .nav-item span{font-size:8px}
+  .teams-week-hero{padding:16px;border-radius:16px}.teams-week-hero h2{font-size:21px}.teams-week-hero p{font-size:11px;max-width:250px}.teams-week-icon{font-size:38px}
+  .teams-week-grid{grid-template-columns:1fr 1fr}
+  .teams-week-grid .team-card{padding:9px}.teams-week-grid .team-card-title{gap:7px}.teams-week-grid .team-card-title span{font-size:12px}.teams-week-grid .team-card li{font-size:11px;gap:6px;padding:6px 1px}
+}
+@media(max-width:430px){
+  .teams-week-grid{grid-template-columns:1fr}
+  .nav-item span{font-size:7.5px}
+}

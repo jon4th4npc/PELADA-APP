@@ -1,28 +1,17 @@
-ATUALIZACAO DO PELADA APP
+ATUALIZACAO - TIMES DA SEMANA + NOMES EM MAIUSCULAS
 
-1. Extraia este ZIP.
-2. No GitHub, abra o repositorio PELADA-APP.
-3. Substitua:
-   - index.html
-   - app.js
-   - styles.css
-4. Envie/substitua a pasta logos.
-5. README.md e opcional.
-6. Faca o commit.
-7. Aguarde o GitHub Pages atualizar.
+No GitHub PELADA-APP, substitua apenas:
+- index.html
+- app.js
+- styles.css
 
-IMPORTANTE:
-NAO substitua nem apague seu config.js atual.
-Nao precisa executar nenhum SQL novo no Supabase para esta atualizacao.
+NAO substitua o config.js.
+NAO precisa alterar nada no Supabase.
 
-NOVO:
-- menus separados;
-- acesso publico sem login;
-- criacao visivel apenas para admin;
-- Partidas + Classificacao + Final no mesmo menu;
-- Estatisticas da semana e geral;
-- Historico publico;
-- menu inferior no celular;
-- visual de campo/pelada;
-- escudos automaticos de mais de 100 clubes das principais ligas europeias,
-  com fallback para escudos locais ou iniciais.
+Mudancas:
+- Novo menu publico "Times" / "Times da Semana".
+- Mostra os 5 times, escudos e jogadores da pelada selecionada.
+- Jogadores aparecem sempre em LETRAS MAIUSCULAS.
+- Novos jogadores tambem passam a ser gravados em maiusculas.
+- Estatisticas semanal e geral mostram nomes em maiusculas.
+- Menu inferior no celular adaptado para 4 opcoes publicas e 5 quando admin estiver logado.

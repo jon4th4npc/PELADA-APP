@@ -26,6 +26,7 @@
 
   <nav class="main-nav" aria-label="Menu principal">
     <button class="nav-item active" data-view="matches">⚽ <span>Partidas</span></button>
+    <button class="nav-item" data-view="teams">👥 <span>Times</span></button>
     <button class="nav-item" data-view="stats">📊 <span>Estatísticas</span></button>
     <button class="nav-item" data-view="history">🗓️ <span>Histórico</span></button>
     <button id="navCreate" class="nav-item admin-only hidden" data-view="create">➕ <span>Criar Pelada</span></button>
@@ -74,8 +75,22 @@
         <span id="adminBadge" class="badge"></span>
       </div>
 
-      <div class="form-grid two">
-        <label>Data da pelada<input id="newDate" type="date"></label>
+      <div class="weekly-schedule-box">
+        <div class="weekly-schedule-icon">📅</div>
+        <div>
+          <strong>Pelada semanal • toda segunda-feira</strong>
+          <p>As próximas segundas já ficam prontas para você escolher. A data mais próxima vem selecionada automaticamente.</p>
+        </div>
+      </div>
+
+      <div class="form-grid schedule-grid">
+        <label>Próximas segundas-feiras
+          <select id="mondayPreset"></select>
+        </label>
+        <label>Data da pelada
+          <input id="newDate" type="date">
+          <small class="field-help">Você ainda pode alterar manualmente em caso de mudança excepcional.</small>
+        </label>
         <label>Título<input id="newTitle" type="text" value="Pelada"></label>
       </div>
       <label>Lista dos times e jogadores
@@ -148,6 +163,26 @@
     </section>
   </section>
 
+  <!-- MENU: TIMES DA SEMANA -->
+  <section id="viewTeams" class="app-view hidden">
+    <section class="teams-week-hero">
+      <div>
+        <span class="eyebrow light">ESCALAÇÃO DA RODADA</span>
+        <h2>Times da Semana</h2>
+        <p id="teamsWeekDate">Confira quem joga em cada time nesta segunda-feira.</p>
+      </div>
+      <div class="teams-week-icon">👥</div>
+    </section>
+
+    <section class="card section-card">
+      <div class="section-title-row">
+        <div class="section-icon blue">⚽</div>
+        <div><h2>Escalações</h2><p class="muted">Os 5 times e seus jogadores da pelada selecionada.</p></div>
+      </div>
+      <div id="teamsList" class="team-grid teams-week-grid"></div>
+    </section>
+  </section>
+
   <!-- MENU: ARTILHARIA E ASSISTÊNCIAS -->
   <section id="viewStats" class="app-view hidden">
     <section class="card section-card">
@@ -176,13 +211,6 @@
       </div>
     </section>
 
-    <section class="card section-card">
-      <div class="section-title-row">
-        <div class="section-icon blue">👥</div>
-        <div><h2>Times e jogadores da rodada</h2><p class="muted">Escalação da pelada selecionada.</p></div>
-      </div>
-      <div id="teamsList" class="team-grid"></div>
-    </section>
   </section>
 
   <!-- MENU: HISTÓRICO -->
