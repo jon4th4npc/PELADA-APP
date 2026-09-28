@@ -396,10 +396,135 @@
 
   function scoreControl(m, side) {
     const value = side === "home" ? m.home_score : m.away_score;
-    if (isAdmin()) {
-      return `<input class="score match-score" data-match="${m.id}" data-side="${side}" type="number" min="0" max="99" inputmode="numeric" value="${value ?? ""}" placeholder="-">`;
+    return `<div class="score-display">${value ?? 0}</div>`;
+  }
+
+  function matchStatSummary(matchId) {
+    const rows = S.stats.filter(s => s.match_id === matchId && ((s.goals || 0) > 0 || (s.assists || 0) > 0));
+    if (!rows.length) return "";
+    const parts = rows.map(s => {
+      const p = S.players.find(x => x.id === s.player_id);
+      if (!p) return "";
+      const bits = [];
+      if ((s.goals || 0) > 0) bits.push(`⚽ ${s.goals}`);
+      if ((s.assists || 0) > 0) bits.push(`🎯 ${s.assists}`);
+      return `<span><b>${esc(playerDisplayName(p.name))}</b> ${bits.join(" ")}</span>`;
+    }).filter(Boolean);
+    return parts.length ? `<div class="match-stat-summary">${parts.join("")}</div>` : "";
+  }
+
+  function openGoalDialog(matchId, teamId) {
+    const match = S.matches.find(x => x.id === matchId);
+    const team = teamById(teamId);
+    if (!match || !team) return;
+
+    const players = playersByTeam(teamId);
+    $("goalDialog").dataset.match = matchId;
+    $("goalDialog").dataset.team = teamId;
+    $("goalDialogTitle").textContent = `Gol do ${team.name}`;
+    $("goalDialogSubtitle").textContent = "Escolha quem marcou e, se houver, quem deu a assistência.";
+
+    $("goalScorer").innerHTML = players
+      .map(p => `<option value="${p.id}">${esc(playerDisplayName(p.name))}</option>`)
+      .join("");
+
+    refreshGoalAssistOptions();
+    $("goalDialog").showModal();
+  }
+
+  function refreshGoalAssistOptions() {
+    const teamId = $("goalDialog").dataset.team;
+    const scorerId = $("goalScorer").value;
+    const players = playersByTeam(teamId);
+    $("goalAssist").innerHTML =
+      '<option value="">SEM ASSISTÊNCIA</option>' +
+      players
+        .filter(p => p.id !== scorerId)
+        .map(p => `<option value="${p.id}">${esc(playerDisplayName(p.name))}</option>`)
+        .join("");
+  }
+
+  async function registerGoal() {
+    const matchId = $("goalDialog").dataset.match;
+    const teamId = $("goalDialog").dataset.team;
+    const scorerId = $("goalScorer").value;
+    const assistId = $("goalAssist").value || null;
+
+    const match = S.matches.find(x => x.id === matchId);
+    if (!match || !scorerId) return status("Escolha quem fez o gol.","warn");
+    if (assistId && assistId === scorerId) return status("O autor do gol não pode dar assistência para si mesmo.","warn");
+
+    const scorerCurrent = getStat(matchId, scorerId);
+    const upserts = [{
+      tournament_id:S.tournament.id,
+      match_id:matchId,
+      player_id:scorerId,
+      goals:(scorerCurrent.goals || 0) + 1,
+      assists:scorerCurrent.assists || 0,
+      updated_by:S.adminName
+    }];
+
+    if (assistId) {
+      const assistCurrent = getStat(matchId, assistId);
+      upserts.push({
+        tournament_id:S.tournament.id,
+        match_id:matchId,
+        player_id:assistId,
+        goals:assistCurrent.goals || 0,
+        assists:(assistCurrent.assists || 0) + 1,
+        updated_by:S.adminName
+      });
     }
-    return `<div class="score-display">${value ?? "-"}</div>`;
+
+    const { error:statError } = await sb
+      .from("player_match_stats")
+      .upsert(upserts,{ onConflict:"match_id,player_id" });
+
+    if (statError) return status("Não foi possível registrar o gol: " + statError.message,"error");
+
+    const currentHome = Number(match.home_score ?? 0);
+    const currentAway = Number(match.away_score ?? 0);
+    const scorePatch = teamId === match.home_team_id
+      ? { home_score:currentHome + 1, away_score:currentAway }
+      : { home_score:currentHome, away_score:currentAway + 1 };
+
+    const { error:scoreError } = await sb
+      .from("matches")
+      .update({ ...scorePatch, updated_by:S.adminName })
+      .eq("id",matchId);
+
+    if (scoreError) {
+      // Tenta devolver a estatística ao valor anterior para evitar placar e ranking divergentes.
+      const rollback = [{
+        tournament_id:S.tournament.id,
+        match_id:matchId,
+        player_id:scorerId,
+        goals:scorerCurrent.goals || 0,
+        assists:scorerCurrent.assists || 0,
+        updated_by:S.adminName
+      }];
+      if (assistId) {
+        const assistCurrent = getStat(matchId, assistId);
+        rollback.push({
+          tournament_id:S.tournament.id,
+          match_id:matchId,
+          player_id:assistId,
+          goals:assistCurrent.goals || 0,
+          assists:assistCurrent.assists || 0,
+          updated_by:S.adminName
+        });
+      }
+      await sb.from("player_match_stats").upsert(rollback,{ onConflict:"match_id,player_id" });
+      return status("O gol não foi registrado no placar: " + scoreError.message,"error");
+    }
+
+    $("goalDialog").close();
+    S.generalStatsLoaded = false;
+    await loadTournament(S.tournament.id);
+
+    const scorer = S.players.find(p => p.id === scorerId);
+    const assist = assistId ? S.players.find(p => p.id === assistId) : null;
+    status(`⚽ Gol de ${playerDisplayName(scorer?.name || "")}${assist ? " • assistência de " + playerDisplayName(assist.name) : " • sem assistência"}.`);
   }
 
   function renderTournament() {
@@ -423,7 +548,8 @@
           ${scoreControl(m,"away")}
           ${teamSide(a,"right")}
         </div>
-        ${isAdmin() ? `<div class="match-actions"><button class="stats-btn secondary" data-match="${m.id}">⚽ Gols e assistências</button><button class="save-match" data-match="${m.id}">Salvar placar</button></div>` : ""}
+        ${isAdmin() ? `<div class="goal-actions"><button class="goal-btn" data-match="${m.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${m.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="match-actions"><button class="stats-btn secondary" data-match="${m.id}">✏️ Corrigir gols/assistências</button></div>` : ""}
+        ${matchStatSummary(m.id)}
       </div>`;
     }).join("");
 
@@ -473,12 +599,8 @@
         ? "Final empatada — defina o desempate"
         : finalMatch.home_score > finalMatch.away_score ? h.name : a.name;
 
-    const finalHomeScore = isAdmin()
-      ? `<input id="finalHomeScore" class="score final-score" type="number" min="0" max="99" inputmode="numeric" value="${finalMatch.home_score ?? ""}" placeholder="-">`
-      : `<div class="score-display final-score">${finalMatch.home_score ?? "-"}</div>`;
-    const finalAwayScore = isAdmin()
-      ? `<input id="finalAwayScore" class="score final-score" type="number" min="0" max="99" inputmode="numeric" value="${finalMatch.away_score ?? ""}" placeholder="-">`
-      : `<div class="score-display final-score">${finalMatch.away_score ?? "-"}</div>`;
+    const finalHomeScore = `<div class="score-display final-score">${finalMatch.home_score ?? 0}</div>`;
+    const finalAwayScore = `<div class="score-display final-score">${finalMatch.away_score ?? 0}</div>`;
 
     $("finalBox").innerHTML = `<div class="final-stage">
       <div class="final-grid played-final">
@@ -486,11 +608,11 @@
         <div class="final-versus"><span>FINAL</span><b>×</b></div>
         <div class="final-team"><div class="final-logo">${teamLogo(a,"large")}</div><strong>${esc(a?.name || "")}</strong>${finalAwayScore}</div>
       </div>
-      ${isAdmin() ? '<div class="actions center-actions"><button id="saveFinalBtn">Salvar final</button><button id="finalStatsBtn" class="secondary">⚽ Gols e assistências</button></div>' : ""}
+      ${isAdmin() ? `<div class="goal-actions final-goal-actions"><button class="goal-btn" data-match="${finalMatch.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${finalMatch.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="actions center-actions"><button id="finalStatsBtn" class="secondary">✏️ Corrigir gols/assistências</button></div>` : ""}
+      ${matchStatSummary(finalMatch.id)}
       <div class="champion">${champion ? (champion.startsWith("Final empatada") ? `⚠️ ${esc(champion)}` : `${teamLogo(champion,"small")}<span>🏆 CAMPEÃO: ${esc(champion)}</span>`) : "🏆 Campeão: aguardando a final"}</div>
     </div>`;
 
-    $("saveFinalBtn")?.addEventListener("click", () => saveFinal(finalMatch));
     $("finalStatsBtn")?.addEventListener("click", () => openStats(finalMatch.id));
   }
 
@@ -563,22 +685,8 @@
   }
 
   function bindMatchControls() {
-    document.querySelectorAll(".save-match").forEach(btn => btn.addEventListener("click", async () => {
-      const id = btn.dataset.match;
-      const home = document.querySelector(`.match-score[data-match="${id}"][data-side="home"]`).value;
-      const away = document.querySelector(`.match-score[data-match="${id}"][data-side="away"]`).value;
-      if (home === "" || away === "") return status("Preencha os dois placares.","warn");
-
-      const { error } = await sb.from("matches").update({
-        home_score:Number(home),
-        away_score:Number(away),
-        updated_by:S.adminName
-      }).eq("id",id);
-
-      if (error) return status(error.message,"error");
-      S.generalStatsLoaded = false;
-      await loadTournament(S.tournament.id);
-      status("Placar salvo.");
+    document.querySelectorAll(".goal-btn").forEach(btn => btn.addEventListener("click", () => {
+      openGoalDialog(btn.dataset.match, btn.dataset.team);
     }));
 
     document.querySelectorAll(".stats-btn").forEach(btn => btn.addEventListener("click", () => openStats(btn.dataset.match)));
@@ -689,8 +797,16 @@
     const savedAssists = savedRows.reduce((s,r) => s + (r.assists || 0),0);
 
     if (expectedGoals !== savedGoals || expectedAssists !== savedAssists) {
-      return status("A conferência dos gols/assistências não bateu. Nada será escondido; confira os valores e salve novamente.","error");
+      return status("A conferência dos gols/assistências não bateu. Confira os valores e salve novamente.","error");
     }
+
+    const { error:scoreSyncError } = await sb.from("matches").update({
+      home_score:homeGoals,
+      away_score:awayGoals,
+      updated_by:S.adminName
+    }).eq("id",matchId);
+
+    if (scoreSyncError) return status("As estatísticas foram salvas, mas o placar não sincronizou: " + scoreSyncError.message,"error");
 
     const { data:refreshedStats, error:refreshError } = await sb
       .from("player_match_stats")
@@ -817,6 +933,8 @@
   }));
 
   $("saveStatsBtn").addEventListener("click",saveStats);
+  $("goalScorer").addEventListener("change",refreshGoalAssistOptions);
+  $("confirmGoalBtn").addEventListener("click",registerGoal);
 
   function toISODateLocal(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
