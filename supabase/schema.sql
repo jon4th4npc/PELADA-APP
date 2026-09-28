@@ -64,7 +64,7 @@ create index if not exists idx_matches_tournament on public.matches(tournament_i
 create index if not exists idx_stats_tournament on public.player_match_stats(tournament_id);
 create index if not exists idx_stats_match on public.player_match_stats(match_id);
 
--- Só estes quatro e-mails internos são administradores.
+-- E-mails internos autorizados como administradores.
 create or replace function public.is_pelada_admin()
 returns boolean
 language sql
@@ -75,7 +75,8 @@ as $$
       'jonathan@pelada.local',
       'julio@pelada.local',
       'caue@pelada.local',
-      'edson@pelada.local'
+      'edson@pelada.local',
+      'samuel@pelada.local'
     ]::text[]
   );
 $$;
@@ -102,7 +103,7 @@ create policy "public read matches" on public.matches for select using (true);
 drop policy if exists "public read stats" on public.player_match_stats;
 create policy "public read stats" on public.player_match_stats for select using (true);
 
--- Escrita somente para os quatro admins
+-- Escrita somente para os administradores autorizados
 drop policy if exists "admin write tournaments insert" on public.tournaments;
 create policy "admin write tournaments insert" on public.tournaments
 for insert to authenticated with check (public.is_pelada_admin());
