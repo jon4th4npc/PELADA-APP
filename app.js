@@ -29,7 +29,19 @@
     valencia: "logos/valencia.png",
     atleticodemadrid: "logos/atletico_de_madrid.png",
     atleticomadrid: "logos/atletico_de_madrid.png",
-    realbetis: "logos/real_betis.png"
+    realbetis: "logos/real_betis.png",
+
+    // Liga Portugal - escudos usados na rodada atual e aliases mais comuns.
+    braga: "https://a.espncdn.com/i/teamlogos/soccer/500/2994.png",
+    scbraga: "https://a.espncdn.com/i/teamlogos/soccer/500/2994.png",
+    benfica: "https://a.espncdn.com/i/teamlogos/soccer/500/1929.png",
+    slbenfica: "https://a.espncdn.com/i/teamlogos/soccer/500/1929.png",
+    sporting: "https://a.espncdn.com/i/teamlogos/soccer/500/2250.png",
+    sportingcp: "https://a.espncdn.com/i/teamlogos/soccer/500/2250.png",
+    porto: "https://a.espncdn.com/i/teamlogos/soccer/500/437.png",
+    fcporto: "https://a.espncdn.com/i/teamlogos/soccer/500/437.png",
+    rioave: "https://a.espncdn.com/i/teamlogos/soccer/500/3822.png",
+    rioavefc: "https://a.espncdn.com/i/teamlogos/soccer/500/3822.png"
   };
 
   // Catálogo online das principais ligas europeias. O site continua funcionando
@@ -80,13 +92,22 @@
       .replace(/[^a-z0-9]/g, "");
   }
 
+  const PLAYER_NAME_ALIASES = {
+    lyndemarques: "lindenmarques",
+    lindenmarques: "lindenmarques",
+    akelles: "akeles",
+    akeles: "akeles"
+  };
+
   function normalizePlayerName(name) {
-    return String(name || "")
+    const normalized = String(name || "")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
+    const compact = normalized.replace(/[^a-z0-9]/g, "");
+    return PLAYER_NAME_ALIASES[compact] || normalized;
   }
 
   function playerDisplayName(name) {
@@ -492,8 +513,12 @@
       r.assists += s.assists || 0;
     }
 
-    const goals = [...totals.values()].sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.player.name.localeCompare(b.player.name));
-    const assists = [...totals.values()].sort((a,b) => b.assists - a.assists || b.goals - a.goals || a.player.name.localeCompare(b.player.name));
+    const goals = [...totals.values()]
+      .filter(r => r.goals > 0)
+      .sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.player.name.localeCompare(b.player.name));
+    const assists = [...totals.values()]
+      .filter(r => r.assists > 0)
+      .sort((a,b) => b.assists - a.assists || b.goals - a.goals || a.player.name.localeCompare(b.player.name));
 
     $("goalsRanking").innerHTML = buildRank(goals,"goals",true);
     $("assistsRanking").innerHTML = buildRank(assists,"assists",true);
@@ -525,8 +550,12 @@
     }
 
     const all = [...grouped.values()].map(r => ({ ...r, weeks:r.tournaments.size }));
-    const goals = [...all].sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
-    const assists = [...all].sort((a,b) => b.assists - a.assists || b.goals - a.goals || a.name.localeCompare(b.name));
+    const goals = [...all]
+      .filter(r => r.goals > 0)
+      .sort((a,b) => b.goals - a.goals || b.assists - a.assists || a.name.localeCompare(b.name));
+    const assists = [...all]
+      .filter(r => r.assists > 0)
+      .sort((a,b) => b.assists - a.assists || b.goals - a.goals || a.name.localeCompare(b.name));
 
     $("generalGoalsRanking").innerHTML = buildRank(goals,"goals",false);
     $("generalAssistsRanking").innerHTML = buildRank(assists,"assists",false);
@@ -643,13 +672,38 @@
       w.classList.remove("hidden");
     }
 
-    const { error } = await sb.from("player_match_stats").upsert(rows,{ onConflict:"match_id,player_id" });
-    if (error) return status(error.message,"error");
+    const { data:savedRows, error } = await sb
+      .from("player_match_stats")
+      .upsert(rows,{ onConflict:"match_id,player_id" })
+      .select("player_id,goals,assists");
 
-    $("statsDialog").close();
+    if (error) return status("Erro ao salvar gols/assistências: " + error.message,"error");
+
+    if (!savedRows || savedRows.length !== rows.length) {
+      return status("Os dados não foram confirmados pelo banco. Tente salvar novamente.","error");
+    }
+
+    const expectedGoals = rows.reduce((s,r) => s + r.goals,0);
+    const expectedAssists = rows.reduce((s,r) => s + r.assists,0);
+    const savedGoals = savedRows.reduce((s,r) => s + (r.goals || 0),0);
+    const savedAssists = savedRows.reduce((s,r) => s + (r.assists || 0),0);
+
+    if (expectedGoals !== savedGoals || expectedAssists !== savedAssists) {
+      return status("A conferência dos gols/assistências não bateu. Nada será escondido; confira os valores e salve novamente.","error");
+    }
+
+    const { data:refreshedStats, error:refreshError } = await sb
+      .from("player_match_stats")
+      .select("*")
+      .eq("tournament_id",S.tournament.id);
+
+    if (refreshError) return status("Salvou, mas houve erro ao atualizar a tela: " + refreshError.message,"error");
+
+    S.stats = refreshedStats || [];
     S.generalStatsLoaded = false;
-    await loadTournament(S.tournament.id);
-    status("Gols e assistências salvos.");
+    $("statsDialog").close();
+    renderTournament();
+    status(`Gols e assistências salvos. Total lançado nesta partida: ${savedGoals} gols e ${savedAssists} assistências.`);
   }
 
   async function createTournament() {
