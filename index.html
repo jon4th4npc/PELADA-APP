@@ -225,6 +225,35 @@
   </section>
 </main>
 
+<dialog id="goalDialog">
+  <form method="dialog" class="dialog-box goal-dialog-box">
+    <div class="section-head">
+      <div>
+        <h2 id="goalDialogTitle">Registrar gol</h2>
+        <p id="goalDialogSubtitle" class="muted"></p>
+      </div>
+      <button value="cancel" class="secondary">Fechar</button>
+    </div>
+
+    <div class="goal-form">
+      <label>⚽ Quem fez o gol?
+        <select id="goalScorer"></select>
+      </label>
+
+      <label>🎯 Quem deu a assistência?
+        <select id="goalAssist">
+          <option value="">SEM ASSISTÊNCIA</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="goal-tip">Ao confirmar, o placar, a artilharia e as assistências são atualizados juntos.</div>
+    <div class="actions">
+      <button id="confirmGoalBtn" type="button">⚽ Confirmar gol</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="statsDialog">
   <form method="dialog" class="dialog-box">
     <div class="section-head">
