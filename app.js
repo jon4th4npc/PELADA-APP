@@ -11,7 +11,8 @@
     JONATHAN: "jonathan@pelada.local",
     JULIO: "julio@pelada.local",
     CAUE: "caue@pelada.local",
-    EDSON: "edson@pelada.local"
+    EDSON: "edson@pelada.local",
+    SAMUEL: "samuel@pelada.local"
   };
 
   const FIXTURES = [[0,1],[2,3],[0,4],[1,2],[3,4],[0,2],[1,3],[2,4],[0,3],[1,4]];
