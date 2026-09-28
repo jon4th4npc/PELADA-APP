@@ -808,18 +808,15 @@
 
     if (scoreSyncError) return status("As estatísticas foram salvas, mas o placar não sincronizou: " + scoreSyncError.message,"error");
 
-    const { data:refreshedStats, error:refreshError } = await sb
-      .from("player_match_stats")
-      .select("*")
-      .eq("tournament_id",S.tournament.id);
-
-    if (refreshError) return status("Salvou, mas houve erro ao atualizar a tela: " + refreshError.message,"error");
-
-    S.stats = refreshedStats || [];
     S.generalStatsLoaded = false;
     $("statsDialog").close();
-    renderTournament();
-    status(`Gols e assistências salvos. Total lançado nesta partida: ${savedGoals} gols e ${savedAssists} assistências.`);
+
+    // Recarrega a rodada inteira para trazer o placar corrigido do banco.
+    // Antes, somente as estatísticas eram atualizadas e S.matches ficava com
+    // o placar antigo em memória, fazendo a tela continuar mostrando 1x1.
+    await loadTournament(S.tournament.id);
+
+    status(`Correção salva. Placar atualizado para ${homeGoals} x ${awayGoals}. Total: ${savedGoals} gols e ${savedAssists} assistências.`);
   }
 
   async function createTournament() {
