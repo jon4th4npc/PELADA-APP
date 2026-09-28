@@ -169,3 +169,82 @@ dialog{border:0;border-radius:18px;padding:0;max-width:880px;width:calc(100% - 2
   .teams-week-grid{grid-template-columns:1fr}
   .nav-item span{font-size:7.5px}
 }
+
+
+/* LANÇAMENTO RÁPIDO DE GOLS */
+.goal-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.goal-btn{
+  min-height:46px;
+  background:linear-gradient(135deg,#0b6b38,#12934d);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 5px 12px rgba(11,107,56,.15);
+  font-size:12px;
+  line-height:1.15;
+}
+.goal-btn:hover{background:linear-gradient(135deg,#095e31,#0f8345)}
+.match-stat-summary{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:9px;
+  padding-top:8px;
+  border-top:1px dashed #dbe5de;
+}
+.match-stat-summary span{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 7px;
+  border-radius:999px;
+  background:#f0f6f2;
+  color:#294b36;
+  font-size:11px;
+}
+.goal-dialog-box{max-width:560px}
+.goal-form{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+  margin-top:14px;
+}
+.goal-form select{
+  min-height:50px;
+  font-size:16px;
+  font-weight:700;
+}
+.goal-tip{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:11px;
+  background:#e9f7ee;
+  color:#175b32;
+  font-size:12px;
+  font-weight:700;
+}
+.final-goal-actions{
+  max-width:680px;
+  margin:12px auto 0;
+}
+
+@media(max-width:720px){
+  .goal-actions{
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+  }
+  .goal-btn{
+    min-height:48px;
+    padding:8px 7px;
+    font-size:11px;
+  }
+  .match-stat-summary{
+    gap:5px;
+  }
+  .match-stat-summary span{
+    font-size:10px;
+  }
+}
