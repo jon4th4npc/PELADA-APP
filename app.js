@@ -587,9 +587,14 @@
           <div class="final-versus"><span>FINAL</span><b>×</b></div>
           <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(second?.name || "2º colocado")}</strong></div>
         </div>
-        ${isAdmin() && done === 10 ? '<div class="actions center-actions"><button id="createFinalBtn">🏆 Criar final com 1º e 2º</button></div>' : ""}
+        ${isAdmin() ? `
+          <div class="final-pending-note ${done === 10 ? "" : "warn"}">
+            ${done === 10 ? "Classificação encerrada. Registre a final." : `Há ${done}/10 partidas classificatórias marcadas como concluídas. Você ainda pode registrar a final manualmente.`}
+          </div>
+          <div class="actions center-actions"><button id="createFinalBtn">🏆 Registrar final</button></div>
+        ` : ""}
       </div>`;
-      $("createFinalBtn")?.addEventListener("click", () => createFinal(rows));
+      $("createFinalBtn")?.addEventListener("click", () => openFinalSetup(rows));
       return;
     }
 
@@ -723,6 +728,80 @@
     } else {
       const winner = hs > as ? h?.name : a?.name;
       status(`🏆 Final salva: ${h?.name || ""} ${hs} x ${as} ${a?.name || ""}. CAMPEÃO: ${winner || ""}.`);
+    }
+  }
+
+  function openFinalSetup(rows) {
+    const dialog = $("finalSetupDialog");
+    if (!dialog) return;
+
+    const options = S.teams
+      .slice()
+      .sort((a,b) => (a.sort_order || 0) - (b.sort_order || 0))
+      .map(t => `<option value="${t.id}">${esc(t.name)}</option>`)
+      .join("");
+
+    $("finalHomeTeam").innerHTML = options;
+    $("finalAwayTeam").innerHTML = options;
+
+    const suggestedHome = rows[0]?.team?.id || S.teams[0]?.id || "";
+    const suggestedAway = rows[1]?.team?.id || S.teams[1]?.id || "";
+
+    $("finalHomeTeam").value = suggestedHome;
+    $("finalAwayTeam").value = suggestedAway;
+    $("finalSetupHomeScore").value = "";
+    $("finalSetupAwayScore").value = "";
+    $("finalSetupHint").textContent = "Selecione os dois finalistas e, se quiser, já informe o placar.";
+    dialog.showModal();
+  }
+
+  async function saveFinalSetup() {
+    if (!isAdmin()) return;
+
+    const homeTeamId = $("finalHomeTeam").value;
+    const awayTeamId = $("finalAwayTeam").value;
+    const homeRaw = $("finalSetupHomeScore").value;
+    const awayRaw = $("finalSetupAwayScore").value;
+
+    if (!homeTeamId || !awayTeamId) return status("Selecione os dois finalistas.","warn");
+    if (homeTeamId === awayTeamId) return status("Os finalistas precisam ser times diferentes.","warn");
+
+    const oneScoreFilled = homeRaw !== "" || awayRaw !== "";
+    if (oneScoreFilled && (homeRaw === "" || awayRaw === "")) {
+      return status("Para salvar o placar, preencha os dois lados da final.","warn");
+    }
+
+    const payload = {
+      tournament_id:S.tournament.id,
+      stage:"final",
+      round_order:99,
+      home_team_id:homeTeamId,
+      away_team_id:awayTeamId,
+      minutes:10,
+      seconds:0,
+      updated_by:S.adminName
+    };
+
+    if (oneScoreFilled) {
+      payload.home_score = Number(homeRaw);
+      payload.away_score = Number(awayRaw);
+    }
+
+    const { error } = await sb.from("matches").insert(payload);
+    if (error) return status("Erro ao registrar a final: " + error.message,"error");
+
+    $("finalSetupDialog").close();
+    S.generalStatsLoaded = false;
+    await loadTournament(S.tournament.id);
+
+    const h = teamById(homeTeamId);
+    const a = teamById(awayTeamId);
+
+    if (oneScoreFilled && Number(homeRaw) !== Number(awayRaw)) {
+      const winner = Number(homeRaw) > Number(awayRaw) ? h?.name : a?.name;
+      status(`🏆 Final registrada: ${h?.name || ""} ${homeRaw} x ${awayRaw} ${a?.name || ""}. CAMPEÃO: ${winner || ""}.`);
+    } else {
+      status("Final registrada. Agora informe o placar da decisão.");
     }
   }
 
@@ -950,6 +1029,7 @@
   $("saveStatsBtn").addEventListener("click",saveStats);
   $("goalScorer").addEventListener("change",refreshGoalAssistOptions);
   $("confirmGoalBtn").addEventListener("click",registerGoal);
+  $("saveFinalSetupBtn").addEventListener("click",saveFinalSetup);
 
   function toISODateLocal(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
