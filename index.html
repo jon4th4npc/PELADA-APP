@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b4d2b">
   <title>Pelada</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260929-final2">
 </head>
 <body>
 <header class="app-header">
@@ -226,6 +226,39 @@
   </section>
 </main>
 
+
+<dialog id="finalSetupDialog">
+  <form method="dialog" class="dialog-box">
+    <div class="section-head">
+      <div>
+        <h2>🏆 Registrar final</h2>
+        <p id="finalSetupHint" class="muted">Selecione os finalistas.</p>
+      </div>
+      <button value="cancel" class="secondary">Fechar</button>
+    </div>
+
+    <div class="final-setup-grid">
+      <label>Finalista 1
+        <select id="finalHomeTeam"></select>
+      </label>
+      <label>Placar
+        <input id="finalSetupHomeScore" type="number" min="0" max="99" inputmode="numeric" placeholder="-">
+      </label>
+      <div class="final-setup-x">×</div>
+      <label>Placar
+        <input id="finalSetupAwayScore" type="number" min="0" max="99" inputmode="numeric" placeholder="-">
+      </label>
+      <label>Finalista 2
+        <select id="finalAwayTeam"></select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="saveFinalSetupBtn" type="button">💾 Salvar final</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="goalDialog">
   <form method="dialog" class="dialog-box goal-dialog-box">
     <div class="section-head">
@@ -269,6 +302,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20260929-final2"></script>
 </body>
 </html>
