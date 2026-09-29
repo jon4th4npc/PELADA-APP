@@ -600,8 +600,13 @@
         ? "Final empatada — defina o desempate"
         : finalMatch.home_score > finalMatch.away_score ? h.name : a.name;
 
-    const finalHomeScore = `<div class="score-display final-score">${finalMatch.home_score ?? 0}</div>`;
-    const finalAwayScore = `<div class="score-display final-score">${finalMatch.away_score ?? 0}</div>`;
+    const finalHomeScore = isAdmin()
+      ? `<input id="finalHomeScore" class="score final-score" type="number" min="0" max="99" inputmode="numeric" value="${finalMatch.home_score ?? ""}" placeholder="-">`
+      : `<div class="score-display final-score">${finalMatch.home_score ?? "-"}</div>`;
+
+    const finalAwayScore = isAdmin()
+      ? `<input id="finalAwayScore" class="score final-score" type="number" min="0" max="99" inputmode="numeric" value="${finalMatch.away_score ?? ""}" placeholder="-">`
+      : `<div class="score-display final-score">${finalMatch.away_score ?? "-"}</div>`;
 
     $("finalBox").innerHTML = `<div class="final-stage">
       <div class="final-grid played-final">
@@ -609,11 +614,12 @@
         <div class="final-versus"><span>FINAL</span><b>×</b></div>
         <div class="final-team"><div class="final-logo">${teamLogo(a,"large")}</div><strong>${esc(a?.name || "")}</strong>${finalAwayScore}</div>
       </div>
-      ${isAdmin() ? `<div class="goal-actions final-goal-actions"><button class="goal-btn" data-match="${finalMatch.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${finalMatch.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="actions center-actions"><button id="finalStatsBtn" class="secondary">✏️ Corrigir gols/assistências</button></div>` : ""}
+      ${isAdmin() ? `<div class="final-score-help">Digite o placar final ou use os botões de gol.</div><div class="actions center-actions"><button id="saveFinalBtn">💾 Salvar placar da final</button></div><div class="goal-actions final-goal-actions"><button class="goal-btn" data-match="${finalMatch.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${finalMatch.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="actions center-actions"><button id="finalStatsBtn" class="secondary">✏️ Corrigir gols/assistências</button></div>` : ""}
       ${matchStatSummary(finalMatch.id)}
       <div class="champion">${champion ? (champion.startsWith("Final empatada") ? `⚠️ ${esc(champion)}` : `${teamLogo(champion,"small")}<span>🏆 CAMPEÃO: ${esc(champion)}</span>`) : "🏆 Campeão: aguardando a final"}</div>
     </div>`;
 
+    $("saveFinalBtn")?.addEventListener("click", () => saveFinal(finalMatch));
     $("finalStatsBtn")?.addEventListener("click", () => openStats(finalMatch.id));
   }
 
@@ -705,8 +711,19 @@
     }).eq("id",finalMatch.id);
 
     if (error) return status(error.message,"error");
+
     S.generalStatsLoaded = false;
     await loadTournament(S.tournament.id);
+
+    const h = teamById(finalMatch.home_team_id);
+    const a = teamById(finalMatch.away_team_id);
+    const hs = Number(home), as = Number(away);
+    if (hs === as) {
+      status(`Final salva em ${hs} x ${as}. Defina o desempate para indicar o campeão.`,"warn");
+    } else {
+      const winner = hs > as ? h?.name : a?.name;
+      status(`🏆 Final salva: ${h?.name || ""} ${hs} x ${as} ${a?.name || ""}. CAMPEÃO: ${winner || ""}.`);
+    }
   }
 
   async function createFinal(rows) {
