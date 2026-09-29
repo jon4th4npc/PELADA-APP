@@ -248,3 +248,22 @@ dialog{border:0;border-radius:18px;padding:0;max-width:880px;width:calc(100% - 2
     font-size:10px;
   }
 }
+
+
+/* PLACAR MANUAL DA FINAL */
+.final-score-help{
+  margin:10px auto 0;
+  text-align:center;
+  font-size:12px;
+  font-weight:800;
+  color:#6b5a16;
+}
+.played-final .final-score.score{
+  display:block;
+  width:78px;
+  min-height:50px;
+  margin:9px auto 0;
+  font-size:24px;
+  border:2px solid #d4b84c;
+  background:#fffef8;
+}
