@@ -669,13 +669,24 @@
     }).join("");
 
     const rows = standings();
-    $("standingsBody").innerHTML = rows.map((r,i) => `<tr class="${i < 2 ? "qualify" : ""}">
-      <td><span class="position-badge">${i + 1}</span></td>
-      <td><div class="standings-team">${teamLogo(r.team,"small")}<span>${esc(r.team.name)}</span>${i < 2 ? '<span class="finalist-tag">FINAL</span>' : ""}</div></td>
-      <td><b>${r.pts}</b></td>
-      <td>${r.sg > 0 ? "+" : ""}${r.sg}</td>
-      <td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp}</td><td>${r.gc}</td>
-    </tr>`).join("");
+    const hasClassification = done > 0;
+
+    $("standingsBody").innerHTML = hasClassification
+      ? rows.map((r,i) => `<tr class="${i < 2 ? "qualify" : ""}">
+          <td><span class="position-badge">${i + 1}</span></td>
+          <td><div class="standings-team">${teamLogo(r.team,"small")}<span>${esc(teamDisplayName(r.team.name))}</span>${i < 2 ? '<span class="finalist-tag">FINAL</span>' : ""}</div></td>
+          <td><b>${r.pts}</b></td>
+          <td>${r.sg > 0 ? "+" : ""}${r.sg}</td>
+          <td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp}</td><td>${r.gc}</td>
+        </tr>`).join("")
+      : `<tr class="standings-empty-row">
+          <td colspan="10">
+            <div class="standings-empty">
+              <strong>⚽ Aguardando os primeiros resultados</strong>
+              <span>A classificação e os dois times que estão indo para a final aparecerão após a primeira partida concluída.</span>
+            </div>
+          </td>
+        </tr>`;
 
     renderFinal(rows,done);
     renderWeeklyRankings();
@@ -694,16 +705,25 @@
     const finalMatch = S.matches.find(m => m.stage === "final");
     const first = rows[0]?.team, second = rows[1]?.team;
 
+    if (!finalMatch && done === 0) {
+      $("finalBox").innerHTML = `<div class="final-stage final-waiting">
+        <div class="final-waiting-icon">🏆</div>
+        <strong>Finalistas ainda não definidos</strong>
+        <span>Aguarde os primeiros resultados da fase classificatória. O 1º e o 2º colocados aparecerão aqui automaticamente.</span>
+      </div>`;
+      return;
+    }
+
     if (!finalMatch) {
       $("finalBox").innerHTML = `<div class="final-stage">
         <div class="final-grid">
-          <div class="final-team"><div class="final-logo">${teamLogo(first,"large")}</div><strong>${esc(first?.name || "1º colocado")}</strong></div>
+          <div class="final-team"><div class="final-logo">${teamLogo(first,"large")}</div><strong>${esc(teamDisplayName(first?.name || "1º colocado"))}</strong></div>
           <div class="final-versus"><span>FINAL</span><b>×</b></div>
-          <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(second?.name || "2º colocado")}</strong></div>
+          <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(teamDisplayName(second?.name || "2º colocado"))}</strong></div>
         </div>
         ${isAdmin() ? `
           <div class="final-pending-note ${done === 10 ? "" : "warn"}">
-            ${done === 10 ? "Classificação encerrada. Registre a final." : `Há ${done}/10 partidas classificatórias marcadas como concluídas. Você ainda pode registrar a final manualmente.`}
+            ${done === 10 ? "Classificação encerrada. Registre a final." : `Há ${done}/10 partidas classificatórias concluídas. Os dois primeiros acima são os finalistas provisórios.`}
           </div>
           <div class="actions center-actions"><button id="createFinalBtn">🏆 Registrar final</button></div>
         ` : ""}
