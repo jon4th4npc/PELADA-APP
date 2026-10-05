@@ -473,29 +473,33 @@
     const teamId = $("goalDialog").dataset.team;
     const scorerId = $("goalScorer").value;
     const players = playersByTeam(teamId);
-    const isOther = scorerId === "__other__";
+    const isOtherScorer = scorerId === "__other__";
 
-    $("goalOtherPlayerWrap").classList.toggle("hidden", !isOther);
-    if (isOther) $("goalOtherPlayer").focus();
+    $("goalOtherPlayerWrap").classList.toggle("hidden", !isOtherScorer);
+    if (isOtherScorer) $("goalOtherPlayer").focus();
 
     $("goalAssist").innerHTML =
       '<option value="">SEM ASSISTÊNCIA</option>' +
       players
-        .filter(p => !isOther && p.id !== scorerId || isOther)
+        .filter(p => isOtherScorer || p.id !== scorerId)
         .map(p => `<option value="${p.id}">${esc(playerDisplayName(p.name))}</option>`)
-        .join("");
+        .join("") +
+      '<option value="__other__">➕ OUTRO JOGADOR</option>';
+
+    $("goalOtherAssist").value = "";
+    refreshGoalAssistOtherField();
   }
 
-  async function resolveGoalScorer(teamId) {
-    const selected = $("goalScorer").value;
-    if (selected !== "__other__") {
-      const player = S.players.find(p => p.id === selected);
-      return player || null;
-    }
+  function refreshGoalAssistOtherField() {
+    const isOtherAssist = $("goalAssist").value === "__other__";
+    $("goalOtherAssistWrap").classList.toggle("hidden", !isOtherAssist);
+    if (isOtherAssist) $("goalOtherAssist").focus();
+  }
 
-    const typed = playerDisplayName($("goalOtherPlayer").value || "");
+  async function resolveGuestPlayer(teamId, typedName, missingMessage) {
+    const typed = playerDisplayName(typedName || "");
     if (!typed) {
-      status("Digite o nome do jogador que fez o gol.","warn");
+      status(missingMessage,"warn");
       return null;
     }
 
@@ -522,10 +526,37 @@
     return data;
   }
 
+  async function resolveGoalScorer(teamId) {
+    const selected = $("goalScorer").value;
+    if (selected !== "__other__") {
+      return S.players.find(p => p.id === selected) || null;
+    }
+
+    return resolveGuestPlayer(
+      teamId,
+      $("goalOtherPlayer").value,
+      "Digite o nome do jogador que fez o gol."
+    );
+  }
+
+  async function resolveGoalAssist(teamId) {
+    const selected = $("goalAssist").value;
+    if (!selected) return null;
+
+    if (selected !== "__other__") {
+      return S.players.find(p => p.id === selected) || null;
+    }
+
+    return resolveGuestPlayer(
+      teamId,
+      $("goalOtherAssist").value,
+      "Digite o nome do jogador que deu a assistência."
+    );
+  }
+
   async function registerGoal() {
     const matchId = $("goalDialog").dataset.match;
     const teamId = $("goalDialog").dataset.team;
-    const assistId = $("goalAssist").value || null;
 
     const match = S.matches.find(x => x.id === matchId);
     if (!match) return status("Partida não encontrada.","error");
@@ -533,6 +564,10 @@
     const scorer = await resolveGoalScorer(teamId);
     if (!scorer) return;
     const scorerId = scorer.id;
+
+    const assist = await resolveGoalAssist(teamId);
+    if ($("goalAssist").value && !assist) return;
+    const assistId = assist?.id || null;
 
     if (assistId && assistId === scorerId) return status("O autor do gol não pode dar assistência para si mesmo.","warn");
 
@@ -604,7 +639,6 @@
     S.generalStatsLoaded = false;
     await loadTournament(S.tournament.id);
 
-    const assist = assistId ? S.players.find(p => p.id === assistId) : null;
     status(`⚽ Gol de ${playerDisplayName(scorer?.name || "")}${assist ? " • assistência de " + playerDisplayName(assist.name) : " • sem assistência"}.`);
   }
 
@@ -1108,6 +1142,7 @@
 
   $("saveStatsBtn").addEventListener("click",saveStats);
   $("goalScorer").addEventListener("change",refreshGoalAssistOptions);
+  $("goalAssist").addEventListener("change",refreshGoalAssistOtherField);
   $("confirmGoalBtn").addEventListener("click",registerGoal);
   $("saveFinalSetupBtn").addEventListener("click",saveFinalSetup);
 
