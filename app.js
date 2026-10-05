@@ -172,17 +172,49 @@
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
 
+  const TEAM_COLOR_MARKERS = [
+    { emoji:"🔴", words:["VERMELHO","RED"], color:"#e53935" },
+    { emoji:"🟢", words:["VERDE","GREEN"], color:"#27ae60" },
+    { emoji:"🔵", words:["AZUL","BLUE"], color:"#2d6cdf" },
+    { emoji:"🟡", words:["AMARELO","YELLOW"], color:"#f4c430" },
+    { emoji:"🟠", words:["LARANJA","ORANGE"], color:"#f28c28" },
+    { emoji:"🟣", words:["ROXO","ROXA","PURPLE"], color:"#8e44ad" },
+    { emoji:"🟤", words:["MARROM","BROWN"], color:"#8d6e63" },
+    { emoji:"⚫", words:["PRETO","PRETA","BLACK"], color:"#202124" },
+    { emoji:"⚪", words:["BRANCO","BRANCA","WHITE"], color:"#ffffff", border:"#b9c5bd" }
+  ];
+
+  function teamColorMarker(name = "") {
+    const upper = String(name).toUpperCase();
+    return TEAM_COLOR_MARKERS.find(m =>
+      String(name).includes(m.emoji) || m.words.some(w => upper.includes(w))
+    ) || null;
+  }
+
+  function teamDisplayName(name = "") {
+    let clean = String(name).trim();
+    for (const m of TEAM_COLOR_MARKERS) clean = clean.replaceAll(m.emoji,"");
+    return clean.replace(/\s{2,}/g," ").trim();
+  }
+
   function teamLogo(teamOrName, extraClass = "") {
     const name = typeof teamOrName === "string" ? teamOrName : teamOrName?.name || "";
     const src = getLogoPath(name);
     if (src) {
       return `<img class="team-logo ${extraClass}" src="${src}" alt="Escudo de ${esc(name)}">`;
     }
+
+    const marker = teamColorMarker(name);
+    if (marker) {
+      const border = marker.border || marker.color;
+      return `<span class="team-logo color-ball ${extraClass}" style="--team-ball:${marker.color};--team-ball-border:${border}" title="${esc(teamDisplayName(name))}"></span>`;
+    }
+
     return `<span class="team-logo fallback ${extraClass}" title="Escudo não cadastrado">${esc(teamInitials(name))}</span>`;
   }
 
   function teamSide(team, side = "") {
-    return `<div class="team-side ${side}">${teamLogo(team)}<span class="team-name">${esc(team?.name || "")}</span></div>`;
+    return `<div class="team-side ${side}">${teamLogo(team)}<span class="team-name">${esc(teamDisplayName(team?.name || ""))}</span></div>`;
   }
 
   function showView(name) {
@@ -354,6 +386,7 @@
 
   const teamById = id => S.teams.find(t => t.id === id);
   const playersByTeam = id => S.players.filter(p => p.team_id === id);
+  const rosterPlayersByTeam = id => playersByTeam(id).filter(p => Number(p.sort_order || 1) < 9000);
   const getStat = (matchId,playerId) => S.stats.find(s => s.match_id === matchId && s.player_id === playerId) || { goals:0, assists:0 };
 
   function standings() {
@@ -427,8 +460,11 @@
 
     $("goalScorer").innerHTML = players
       .map(p => `<option value="${p.id}">${esc(playerDisplayName(p.name))}</option>`)
-      .join("");
+      .join("") +
+      '<option value="__other__">➕ OUTRO JOGADOR</option>';
 
+    $("goalOtherPlayer").value = "";
+    $("goalOtherPlayerWrap").classList.add("hidden");
     refreshGoalAssistOptions();
     $("goalDialog").showModal();
   }
@@ -437,22 +473,67 @@
     const teamId = $("goalDialog").dataset.team;
     const scorerId = $("goalScorer").value;
     const players = playersByTeam(teamId);
+    const isOther = scorerId === "__other__";
+
+    $("goalOtherPlayerWrap").classList.toggle("hidden", !isOther);
+    if (isOther) $("goalOtherPlayer").focus();
+
     $("goalAssist").innerHTML =
       '<option value="">SEM ASSISTÊNCIA</option>' +
       players
-        .filter(p => p.id !== scorerId)
+        .filter(p => !isOther && p.id !== scorerId || isOther)
         .map(p => `<option value="${p.id}">${esc(playerDisplayName(p.name))}</option>`)
         .join("");
+  }
+
+  async function resolveGoalScorer(teamId) {
+    const selected = $("goalScorer").value;
+    if (selected !== "__other__") {
+      const player = S.players.find(p => p.id === selected);
+      return player || null;
+    }
+
+    const typed = playerDisplayName($("goalOtherPlayer").value || "");
+    if (!typed) {
+      status("Digite o nome do jogador que fez o gol.","warn");
+      return null;
+    }
+
+    const normalized = normalizePlayerName(typed);
+    const existing = playersByTeam(teamId).find(p => normalizePlayerName(p.name) === normalized);
+    if (existing) return existing;
+
+    const guests = playersByTeam(teamId).filter(p => Number(p.sort_order || 0) >= 9000);
+    const nextOrder = 9000 + guests.length + 1;
+
+    const { data, error } = await sb.from("players").insert({
+      tournament_id:S.tournament.id,
+      team_id:teamId,
+      name:typed,
+      sort_order:nextOrder
+    }).select().single();
+
+    if (error) {
+      status("Não foi possível cadastrar o jogador convidado: " + error.message,"error");
+      return null;
+    }
+
+    S.players.push(data);
+    return data;
   }
 
   async function registerGoal() {
     const matchId = $("goalDialog").dataset.match;
     const teamId = $("goalDialog").dataset.team;
-    const scorerId = $("goalScorer").value;
     const assistId = $("goalAssist").value || null;
 
     const match = S.matches.find(x => x.id === matchId);
-    if (!match || !scorerId) return status("Escolha quem fez o gol.","warn");
+    if (!match) return status("Partida não encontrada.","error");
+
+    const scorer = await resolveGoalScorer(teamId);
+    if (!scorer) return;
+    const scorerId = scorer.id;
+
     if (assistId && assistId === scorerId) return status("O autor do gol não pode dar assistência para si mesmo.","warn");
 
     const scorerCurrent = getStat(matchId, scorerId);
@@ -523,7 +604,6 @@
     S.generalStatsLoaded = false;
     await loadTournament(S.tournament.id);
 
-    const scorer = S.players.find(p => p.id === scorerId);
     const assist = assistId ? S.players.find(p => p.id === assistId) : null;
     status(`⚽ Gol de ${playerDisplayName(scorer?.name || "")}${assist ? " • assistência de " + playerDisplayName(assist.name) : " • sem assistência"}.`);
   }
@@ -569,7 +649,7 @@
     $("teamsList").innerHTML = S.teams.map(t => `
       <div class="team-card">
         <h3 class="team-card-title">${teamLogo(t)}<span>${esc(t.name)}</span></h3>
-        <ol>${playersByTeam(t.id).map(p => `<li>${esc(playerDisplayName(p.name))}</li>`).join("")}</ol>
+        <ol>${rosterPlayersByTeam(t.id).map(p => `<li>${esc(playerDisplayName(p.name))}</li>`).join("")}</ol>
       </div>
     `).join("");
 
