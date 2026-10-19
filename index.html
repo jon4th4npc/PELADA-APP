@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b4d2b">
   <title>Pelada</title>
-  <link rel="stylesheet" href="styles.css?v=20261005-classificacao1">
+  <link rel="stylesheet" href="styles.css?v=20261019-format45-1">
 </head>
 <body>
 <header class="app-header">
@@ -72,7 +72,7 @@
       </div>
 
       <div class="section-head compact-head">
-        <div><h3>Configuração da rodada</h3><p class="muted">5 times, 5 jogadores por time e 10 partidas classificatórias.</p></div>
+        <div><h3>Configuração da rodada</h3><p class="muted">4 ou 5 times • 5 jogadores por time • formato definido automaticamente.</p></div>
         <span id="adminBadge" class="badge"></span>
       </div>
 
@@ -120,7 +120,7 @@
           <div>
             <span class="eyebrow light">RODADA ATUAL</span>
             <h2 id="tournamentTitle">Pelada</h2>
-            <p id="tournamentDate"></p>
+            <p id="tournamentDate"></p><span id="formatBadge" class="format-badge"></span>
           </div>
           <div class="hero-ball">⚽</div>
         </div>
@@ -130,7 +130,7 @@
         <div class="section-head">
           <div class="section-title-row">
             <div class="section-icon green">⚽</div>
-            <div><h2>Partidas classificatórias</h2><p class="muted">10 partidas • 8min30s cada</p></div>
+            <div><h2>Partidas classificatórias</h2><p id="groupFormatText" class="muted">Partidas • 8min30s cada</p></div>
           </div>
           <div class="progress-pill"><span id="matchProgress">0/10</span> jogos</div>
         </div>
@@ -148,10 +148,18 @@
         </table></div>
       </section>
 
+      <section id="semifinalSection" class="card section-card semifinal-section hidden">
+        <div class="section-title-row">
+          <div class="section-icon blue">🏁</div>
+          <div><h2>Semifinais • 8min30s</h2><p class="muted">1º × 4º e 2º × 3º. Os vencedores avançam para a final.</p></div>
+        </div>
+        <div id="semifinalBox"></div>
+      </section>
+
       <section class="card section-card final-section">
         <div class="section-title-row">
           <div class="section-icon trophy">🏆</div>
-          <div><h2>Final • 10 minutos</h2><p class="muted">1º e 2º colocados disputam o título.</p></div>
+          <div><h2>Final • 10 minutos</h2><p id="finalFormatText" class="muted">Final da pelada.</p></div>
         </div>
         <div id="finalBox"></div>
       </section>
@@ -178,7 +186,7 @@
     <section class="card section-card">
       <div class="section-title-row">
         <div class="section-icon blue">⚽</div>
-        <div><h2>Escalações</h2><p class="muted">Os 5 times e seus jogadores da pelada selecionada.</p></div>
+        <div><h2>Escalações</h2><p id="teamsCountText" class="muted">Times e jogadores da pelada selecionada.</p></div>
       </div>
       <div id="teamsList" class="team-grid teams-week-grid"></div>
     </section>
@@ -312,6 +320,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
-<script src="app.js?v=20261005-classificacao1"></script>
+<script src="app.js?v=20261019-format45-1"></script>
 </body>
 </html>
