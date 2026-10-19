@@ -15,7 +15,12 @@
     SAMUEL: "samuel@pelada.local"
   };
 
-  const FIXTURES = [[0,1],[2,3],[0,4],[1,2],[3,4],[0,2],[1,3],[2,4],[0,3],[1,4]];
+  const FIXTURES_5 = [[0,1],[2,3],[0,4],[1,2],[3,4],[0,2],[1,3],[2,4],[0,3],[1,4]];
+  const FIXTURES_4 = [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]];
+
+  const fixturesForTeamCount = count => count === 4 ? FIXTURES_4 : FIXTURES_5;
+  const groupMatchTotal = count => count === 4 ? 6 : 10;
+  const isFourTeamFormat = () => S.teams.length === 4;
 
   // Catálogo local inicial. Se o time não estiver aqui, aparecem as iniciais.
   const LOGO_CATALOG = {
@@ -289,18 +294,33 @@
     `).join("");
 
     const warnings = [];
-    if (S.preview.length !== 5) warnings.push(`Foram encontrados ${S.preview.length} times. O padrão é 5.`);
+    const validFormat = S.preview.length === 4 || S.preview.length === 5;
+
+    if (!validFormat) {
+      warnings.push(`Foram encontrados ${S.preview.length} times. A pelada aceita 4 ou 5 times.`);
+    }
+
     S.preview.forEach(t => {
       if (t.players.length !== 5) warnings.push(`${t.name}: ${t.players.length} jogadores encontrados.`);
     });
 
+    const formatInfo = validFormat
+      ? S.preview.length === 4
+        ? "✅ Formato detectado: 4 times • 6 partidas classificatórias • semifinais 1º × 4º e 2º × 3º • final."
+        : "✅ Formato detectado: 5 times • 10 partidas classificatórias • 1º e 2º fazem a final."
+      : "";
+
     const w = $("previewWarnings");
-    if (warnings.length) {
-      w.innerHTML = warnings.map(x => `<div>• ${esc(x)}</div>`).join("");
+    const messages = [formatInfo, ...warnings].filter(Boolean);
+    if (messages.length) {
+      w.innerHTML = messages.map(x => `<div>${x.startsWith("✅") ? x : "• " + esc(x)}</div>`).join("");
       w.classList.remove("hidden");
+      w.classList.toggle("warn", warnings.length > 0);
     } else {
       w.classList.add("hidden");
     }
+
+    $("createTournament").disabled = !validFormat;
     $("importPreview").classList.remove("hidden");
   }
 
@@ -642,15 +662,112 @@
     status(`⚽ Gol de ${playerDisplayName(scorer?.name || "")}${assist ? " • assistência de " + playerDisplayName(assist.name) : " • sem assistência"}.`);
   }
 
+  function knockoutWinner(match) {
+    if (!match || match.home_score === null || match.away_score === null) return null;
+    if (match.home_score === match.away_score) return null;
+    return match.home_score > match.away_score
+      ? teamById(match.home_team_id)
+      : teamById(match.away_team_id);
+  }
+
+  function renderKnockoutMatch(match,label) {
+    const h = teamById(match.home_team_id), a = teamById(match.away_team_id);
+    const winner = knockoutWinner(match);
+    const tied = match.home_score !== null && match.away_score !== null && match.home_score === match.away_score;
+
+    return `<div class="match knockout-match ${match.home_score !== null && match.away_score !== null ? "completed" : ""}">
+      <div class="match-head"><span>${esc(label)}</span><span>8MIN30S</span></div>
+      <div class="match-row">
+        ${teamSide(h,"left")}
+        ${scoreControl(match,"home")}
+        <div class="x">×</div>
+        ${scoreControl(match,"away")}
+        ${teamSide(a,"right")}
+      </div>
+      ${isAdmin() ? `<div class="goal-actions"><button class="goal-btn" data-match="${match.id}" data-team="${h?.id}">⚽ + GOL ${esc(teamDisplayName(h?.name || ""))}</button><button class="goal-btn" data-match="${match.id}" data-team="${a?.id}">⚽ + GOL ${esc(teamDisplayName(a?.name || ""))}</button></div><div class="match-actions"><button class="stats-btn secondary" data-match="${match.id}">✏️ Corrigir gols/assistências</button></div>` : ""}
+      ${matchStatSummary(match.id)}
+      <div class="knockout-status ${winner ? "winner" : tied ? "tie" : ""}">
+        ${winner ? `✅ CLASSIFICADO: ${esc(teamDisplayName(winner.name))}` : tied ? "⚠️ EMPATE — defina o desempate para termos um vencedor" : "Aguardando resultado"}
+      </div>
+    </div>`;
+  }
+
+  function renderSemifinals(rows,done,total) {
+    const section = $("semifinalSection");
+    if (!section) return;
+
+    if (!isFourTeamFormat()) {
+      section.classList.add("hidden");
+      $("semifinalBox").innerHTML = "";
+      return;
+    }
+
+    section.classList.remove("hidden");
+
+    const semis = S.matches
+      .filter(m => m.stage === "final" && (m.round_order === 91 || m.round_order === 92))
+      .sort((a,b) => a.round_order - b.round_order);
+
+    if (!done) {
+      $("semifinalBox").innerHTML = `<div class="semifinal-waiting">
+        <strong>🏁 Semifinais ainda não definidas</strong>
+        <span>A classificação começa após os primeiros resultados. Ao final das ${total} partidas, teremos 1º × 4º e 2º × 3º.</span>
+      </div>`;
+      return;
+    }
+
+    if (!semis.length) {
+      const first = rows[0]?.team, second = rows[1]?.team, third = rows[2]?.team, fourth = rows[3]?.team;
+      const confirmed = done >= total;
+
+      $("semifinalBox").innerHTML = `
+        <div class="semifinal-preview-label">${confirmed ? "CONFRONTOS DEFINIDOS" : "CONFRONTOS PROVISÓRIOS"}</div>
+        <div class="semifinal-preview-grid">
+          <div class="semifinal-preview-card">
+            <span>SEMIFINAL 1</span>
+            <div>${teamLogo(first,"small")}<b>${esc(teamDisplayName(first?.name || "1º"))}</b><em>×</em>${teamLogo(fourth,"small")}<b>${esc(teamDisplayName(fourth?.name || "4º"))}</b></div>
+            <small>1º colocado × 4º colocado</small>
+          </div>
+          <div class="semifinal-preview-card">
+            <span>SEMIFINAL 2</span>
+            <div>${teamLogo(second,"small")}<b>${esc(teamDisplayName(second?.name || "2º"))}</b><em>×</em>${teamLogo(third,"small")}<b>${esc(teamDisplayName(third?.name || "3º"))}</b></div>
+            <small>2º colocado × 3º colocado</small>
+          </div>
+        </div>
+        ${confirmed
+          ? isAdmin()
+            ? '<div class="actions center-actions"><button id="createSemifinalsBtn">🏁 Criar semifinais</button></div>'
+            : '<div class="final-pending-note">Classificação encerrada. Aguardando o registro das semifinais.</div>'
+          : `<div class="final-pending-note warn">Classificação em andamento: ${done}/${total} partidas com resultado.</div>`}
+      `;
+
+      $("createSemifinalsBtn")?.addEventListener("click", () => createSemifinals(rows));
+      return;
+    }
+
+    $("semifinalBox").innerHTML = `<div class="match-list semifinal-match-list">
+      ${semis.map((m,i) => renderKnockoutMatch(m,`SEMIFINAL ${i+1}`)).join("")}
+    </div>`;
+  }
+
   function renderTournament() {
     $("tournamentPanel").classList.remove("hidden");
     $("tournamentTitle").textContent = S.tournament.title || "Pelada";
-    $("tournamentDate").textContent = fmtDate(S.tournament.event_date);
-    if ($("teamsWeekDate")) $("teamsWeekDate").textContent = `Segunda-feira • ${fmtDate(S.tournament.event_date)} • confira os times e jogadores da rodada.`;
 
+    const teamCount = S.teams.length;
+    const four = teamCount === 4;
     const groupMatches = S.matches.filter(m => m.stage === "group");
+    const total = groupMatches.length || groupMatchTotal(teamCount);
     const done = groupMatches.filter(m => m.home_score !== null && m.away_score !== null).length;
-    $("matchProgress").textContent = `${done}/10`;
+
+    $("tournamentDate").textContent = fmtDate(S.tournament.event_date);
+    if ($("formatBadge")) $("formatBadge").textContent = four ? "4 TIMES • SEMIFINAIS" : "5 TIMES • FINAL DIRETA";
+    if ($("groupFormatText")) $("groupFormatText").textContent = `${total} partidas • 8min30s cada`;
+    if ($("teamsCountText")) $("teamsCountText").textContent = `Os ${teamCount} times e seus jogadores da pelada selecionada.`;
+    if ($("finalFormatText")) $("finalFormatText").textContent = four ? "Vencedores das semifinais disputam o título." : "1º e 2º colocados disputam o título.";
+    if ($("teamsWeekDate")) $("teamsWeekDate").textContent = `Segunda-feira • ${fmtDate(S.tournament.event_date)} • confira os ${teamCount} times e jogadores da rodada.`;
+
+    $("matchProgress").textContent = `${done}/${total}`;
 
     $("matchesList").innerHTML = groupMatches.map(m => {
       const h = teamById(m.home_team_id), a = teamById(m.away_team_id);
@@ -663,7 +780,7 @@
           ${scoreControl(m,"away")}
           ${teamSide(a,"right")}
         </div>
-        ${isAdmin() ? `<div class="goal-actions"><button class="goal-btn" data-match="${m.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${m.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="match-actions"><button class="stats-btn secondary" data-match="${m.id}">✏️ Corrigir gols/assistências</button></div>` : ""}
+        ${isAdmin() ? `<div class="goal-actions"><button class="goal-btn" data-match="${m.id}" data-team="${h?.id}">⚽ + GOL ${esc(teamDisplayName(h?.name || ""))}</button><button class="goal-btn" data-match="${m.id}" data-team="${a?.id}">⚽ + GOL ${esc(teamDisplayName(a?.name || ""))}</button></div><div class="match-actions"><button class="stats-btn secondary" data-match="${m.id}">✏️ Corrigir gols/assistências</button></div>` : ""}
         ${matchStatSummary(m.id)}
       </div>`;
     }).join("");
@@ -672,28 +789,42 @@
     const hasClassification = done > 0;
 
     $("standingsBody").innerHTML = hasClassification
-      ? rows.map((r,i) => `<tr class="${i < 2 ? "qualify" : ""}">
-          <td><span class="position-badge">${i + 1}</span></td>
-          <td><div class="standings-team">${teamLogo(r.team,"small")}<span>${esc(teamDisplayName(r.team.name))}</span>${i < 2 ? '<span class="finalist-tag">FINAL</span>' : ""}</div></td>
-          <td><b>${r.pts}</b></td>
-          <td>${r.sg > 0 ? "+" : ""}${r.sg}</td>
-          <td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp}</td><td>${r.gc}</td>
-        </tr>`).join("")
+      ? rows.map((r,i) => {
+          let tag = "";
+          let rowClass = "";
+          if (four) {
+            const pairs = ["SF1 • × 4º","SF2 • × 3º","SF2 • × 2º","SF1 • × 1º"];
+            tag = `<span class="finalist-tag semifinal-tag">${pairs[i] || "SEMIFINAL"}</span>`;
+            rowClass = "semifinal-qualify";
+          } else if (i < 2) {
+            tag = '<span class="finalist-tag">FINAL</span>';
+            rowClass = "qualify";
+          }
+
+          return `<tr class="${rowClass}">
+            <td><span class="position-badge">${i + 1}</span></td>
+            <td><div class="standings-team">${teamLogo(r.team,"small")}<span>${esc(teamDisplayName(r.team.name))}</span>${tag}</div></td>
+            <td><b>${r.pts}</b></td>
+            <td>${r.sg > 0 ? "+" : ""}${r.sg}</td>
+            <td>${r.j}</td><td>${r.v}</td><td>${r.e}</td><td>${r.d}</td><td>${r.gp}</td><td>${r.gc}</td>
+          </tr>`;
+        }).join("")
       : `<tr class="standings-empty-row">
           <td colspan="10">
             <div class="standings-empty">
               <strong>⚽ Aguardando os primeiros resultados</strong>
-              <span>A classificação e os dois times que estão indo para a final aparecerão após a primeira partida concluída.</span>
+              <span>${four ? "A classificação e os confrontos das semifinais aparecerão após a primeira partida com resultado." : "A classificação e os dois times que estão indo para a final aparecerão após a primeira partida com resultado."}</span>
             </div>
           </td>
         </tr>`;
 
-    renderFinal(rows,done);
+    renderSemifinals(rows,done,total);
+    renderFinal(rows,done,total);
     renderWeeklyRankings();
 
     $("teamsList").innerHTML = S.teams.map(t => `
       <div class="team-card">
-        <h3 class="team-card-title">${teamLogo(t)}<span>${esc(t.name)}</span></h3>
+        <h3 class="team-card-title">${teamLogo(t)}<span>${esc(teamDisplayName(t.name))}</span></h3>
         <ol>${rosterPlayersByTeam(t.id).map(p => `<li>${esc(playerDisplayName(p.name))}</li>`).join("")}</ol>
       </div>
     `).join("");
@@ -701,35 +832,85 @@
     bindMatchControls();
   }
 
-  function renderFinal(rows,done) {
-    const finalMatch = S.matches.find(m => m.stage === "final");
-    const first = rows[0]?.team, second = rows[1]?.team;
+  function renderFinal(rows,done,total) {
+    const finalMatch = S.matches.find(m => m.stage === "final" && m.round_order === 99);
+    const four = isFourTeamFormat();
 
-    if (!finalMatch && done === 0) {
-      $("finalBox").innerHTML = `<div class="final-stage final-waiting">
-        <div class="final-waiting-icon">🏆</div>
-        <strong>Finalistas ainda não definidos</strong>
-        <span>Aguarde os primeiros resultados da fase classificatória. O 1º e o 2º colocados aparecerão aqui automaticamente.</span>
-      </div>`;
-      return;
-    }
+    let first = rows[0]?.team;
+    let second = rows[1]?.team;
 
-    if (!finalMatch) {
-      $("finalBox").innerHTML = `<div class="final-stage">
-        <div class="final-grid">
-          <div class="final-team"><div class="final-logo">${teamLogo(first,"large")}</div><strong>${esc(teamDisplayName(first?.name || "1º colocado"))}</strong></div>
-          <div class="final-versus"><span>FINAL</span><b>×</b></div>
-          <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(teamDisplayName(second?.name || "2º colocado"))}</strong></div>
-        </div>
-        ${isAdmin() ? `
-          <div class="final-pending-note ${done === 10 ? "" : "warn"}">
-            ${done === 10 ? "Classificação encerrada. Registre a final." : `Há ${done}/10 partidas classificatórias concluídas. Os dois primeiros acima são os finalistas provisórios.`}
+    if (four) {
+      const semis = S.matches
+        .filter(m => m.stage === "final" && (m.round_order === 91 || m.round_order === 92))
+        .sort((a,b) => a.round_order - b.round_order);
+
+      if (!finalMatch) {
+        if (semis.length < 2) {
+          $("finalBox").innerHTML = `<div class="final-stage final-waiting">
+            <div class="final-waiting-icon">🏆</div>
+            <strong>Finalistas ainda não definidos</strong>
+            <span>${done < total ? "Finalize a fase classificatória e depois dispute as duas semifinais." : "Crie e dispute as duas semifinais para definir os finalistas."}</span>
+          </div>`;
+          return;
+        }
+
+        const w1 = knockoutWinner(semis[0]);
+        const w2 = knockoutWinner(semis[1]);
+        const tie1 = semis[0].home_score !== null && semis[0].away_score !== null && semis[0].home_score === semis[0].away_score;
+        const tie2 = semis[1].home_score !== null && semis[1].away_score !== null && semis[1].home_score === semis[1].away_score;
+
+        if (!w1 || !w2) {
+          $("finalBox").innerHTML = `<div class="final-stage final-waiting">
+            <div class="final-waiting-icon">🏆</div>
+            <strong>Finalistas ainda não definidos</strong>
+            <span>${tie1 || tie2 ? "Há semifinal empatada. Defina o desempate para indicar o vencedor." : "Aguardando o resultado das duas semifinais."}</span>
+          </div>`;
+          return;
+        }
+
+        first = w1;
+        second = w2;
+
+        $("finalBox").innerHTML = `<div class="final-stage">
+          <div class="final-grid">
+            <div class="final-team"><div class="final-logo">${teamLogo(first,"large")}</div><strong>${esc(teamDisplayName(first.name))}</strong></div>
+            <div class="final-versus"><span>FINAL</span><b>×</b></div>
+            <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(teamDisplayName(second.name))}</strong></div>
           </div>
-          <div class="actions center-actions"><button id="createFinalBtn">🏆 Registrar final</button></div>
-        ` : ""}
-      </div>`;
-      $("createFinalBtn")?.addEventListener("click", () => openFinalSetup(rows));
-      return;
+          <div class="final-pending-note">Vencedores das semifinais definidos.</div>
+          ${isAdmin() ? '<div class="actions center-actions"><button id="createFinalFromSemisBtn">🏆 Criar final com os vencedores</button></div>' : ""}
+        </div>`;
+
+        $("createFinalFromSemisBtn")?.addEventListener("click", () => createFinalFromTeams(first,second));
+        return;
+      }
+    } else {
+      if (!finalMatch && done === 0) {
+        $("finalBox").innerHTML = `<div class="final-stage final-waiting">
+          <div class="final-waiting-icon">🏆</div>
+          <strong>Finalistas ainda não definidos</strong>
+          <span>Aguarde os primeiros resultados da fase classificatória. O 1º e o 2º colocados aparecerão aqui automaticamente.</span>
+        </div>`;
+        return;
+      }
+
+      if (!finalMatch) {
+        $("finalBox").innerHTML = `<div class="final-stage">
+          <div class="final-grid">
+            <div class="final-team"><div class="final-logo">${teamLogo(first,"large")}</div><strong>${esc(teamDisplayName(first?.name || "1º colocado"))}</strong></div>
+            <div class="final-versus"><span>FINAL</span><b>×</b></div>
+            <div class="final-team"><div class="final-logo">${teamLogo(second,"large")}</div><strong>${esc(teamDisplayName(second?.name || "2º colocado"))}</strong></div>
+          </div>
+          ${isAdmin() ? `
+            <div class="final-pending-note ${done === total ? "" : "warn"}">
+              ${done === total ? "Classificação encerrada. Registre a final." : `Há ${done}/${total} partidas classificatórias com resultado. Os dois primeiros acima são os finalistas provisórios.`}
+            </div>
+            <div class="actions center-actions"><button id="createFinalBtn">🏆 Registrar final</button></div>
+          ` : ""}
+        </div>`;
+        $("createFinalBtn")?.addEventListener("click", () => openFinalSetup(rows));
+        return;
+      }
     }
 
     const h = teamById(finalMatch.home_team_id), a = teamById(finalMatch.away_team_id);
@@ -749,13 +930,13 @@
 
     $("finalBox").innerHTML = `<div class="final-stage">
       <div class="final-grid played-final">
-        <div class="final-team"><div class="final-logo">${teamLogo(h,"large")}</div><strong>${esc(h?.name || "")}</strong>${finalHomeScore}</div>
+        <div class="final-team"><div class="final-logo">${teamLogo(h,"large")}</div><strong>${esc(teamDisplayName(h?.name || ""))}</strong>${finalHomeScore}</div>
         <div class="final-versus"><span>FINAL</span><b>×</b></div>
-        <div class="final-team"><div class="final-logo">${teamLogo(a,"large")}</div><strong>${esc(a?.name || "")}</strong>${finalAwayScore}</div>
+        <div class="final-team"><div class="final-logo">${teamLogo(a,"large")}</div><strong>${esc(teamDisplayName(a?.name || ""))}</strong>${finalAwayScore}</div>
       </div>
-      ${isAdmin() ? `<div class="final-score-help">Digite o placar final ou use os botões de gol.</div><div class="actions center-actions"><button id="saveFinalBtn">💾 Salvar placar da final</button></div><div class="goal-actions final-goal-actions"><button class="goal-btn" data-match="${finalMatch.id}" data-team="${h?.id}">⚽ + GOL ${esc(h?.name || "")}</button><button class="goal-btn" data-match="${finalMatch.id}" data-team="${a?.id}">⚽ + GOL ${esc(a?.name || "")}</button></div><div class="actions center-actions"><button id="finalStatsBtn" class="secondary">✏️ Corrigir gols/assistências</button></div>` : ""}
+      ${isAdmin() ? `<div class="final-score-help">Digite o placar final ou use os botões de gol.</div><div class="actions center-actions"><button id="saveFinalBtn">💾 Salvar placar da final</button></div><div class="goal-actions final-goal-actions"><button class="goal-btn" data-match="${finalMatch.id}" data-team="${h?.id}">⚽ + GOL ${esc(teamDisplayName(h?.name || ""))}</button><button class="goal-btn" data-match="${finalMatch.id}" data-team="${a?.id}">⚽ + GOL ${esc(teamDisplayName(a?.name || ""))}</button></div><div class="actions center-actions"><button id="finalStatsBtn" class="secondary">✏️ Corrigir gols/assistências</button></div>` : ""}
       ${matchStatSummary(finalMatch.id)}
-      <div class="champion">${champion ? (champion.startsWith("Final empatada") ? `⚠️ ${esc(champion)}` : `${teamLogo(champion,"small")}<span>🏆 CAMPEÃO: ${esc(champion)}</span>`) : "🏆 Campeão: aguardando a final"}</div>
+      <div class="champion">${champion ? (champion.startsWith("Final empatada") ? `⚠️ ${esc(champion)}` : `${teamLogo(champion,"small")}<span>🏆 CAMPEÃO: ${esc(teamDisplayName(champion))}</span>`) : "🏆 Campeão: aguardando a final"}</div>
     </div>`;
 
     $("saveFinalBtn")?.addEventListener("click", () => saveFinal(finalMatch));
@@ -863,6 +1044,69 @@
       const winner = hs > as ? h?.name : a?.name;
       status(`🏆 Final salva: ${h?.name || ""} ${hs} x ${as} ${a?.name || ""}. CAMPEÃO: ${winner || ""}.`);
     }
+  }
+
+  async function createSemifinals(rows) {
+    if (!isAdmin() || !isFourTeamFormat()) return;
+    if (rows.length < 4) return status("Classificação incompleta para criar as semifinais.","warn");
+
+    const already = S.matches.some(m => m.stage === "final" && (m.round_order === 91 || m.round_order === 92));
+    if (already) return status("As semifinais já foram criadas.","warn");
+
+    const groupMatches = S.matches.filter(m => m.stage === "group");
+    const done = groupMatches.filter(m => m.home_score !== null && m.away_score !== null).length;
+    if (done < groupMatches.length) return status("Finalize as 6 partidas classificatórias antes de criar as semifinais.","warn");
+
+    const payload = [
+      {
+        tournament_id:S.tournament.id,
+        stage:"final",
+        round_order:91,
+        home_team_id:rows[0].team.id,
+        away_team_id:rows[3].team.id,
+        minutes:8,
+        seconds:30,
+        updated_by:S.adminName
+      },
+      {
+        tournament_id:S.tournament.id,
+        stage:"final",
+        round_order:92,
+        home_team_id:rows[1].team.id,
+        away_team_id:rows[2].team.id,
+        minutes:8,
+        seconds:30,
+        updated_by:S.adminName
+      }
+    ];
+
+    const { error } = await sb.from("matches").insert(payload);
+    if (error) return status("Erro ao criar semifinais: " + error.message,"error");
+
+    await loadTournament(S.tournament.id);
+    status("🏁 Semifinais criadas: 1º × 4º e 2º × 3º.");
+  }
+
+  async function createFinalFromTeams(homeTeam,awayTeam) {
+    if (!isAdmin() || !homeTeam || !awayTeam) return;
+
+    const exists = S.matches.some(m => m.stage === "final" && m.round_order === 99);
+    if (exists) return status("A final já foi criada.","warn");
+
+    const { error } = await sb.from("matches").insert({
+      tournament_id:S.tournament.id,
+      stage:"final",
+      round_order:99,
+      home_team_id:homeTeam.id,
+      away_team_id:awayTeam.id,
+      minutes:10,
+      seconds:0,
+      updated_by:S.adminName
+    });
+
+    if (error) return status("Erro ao criar a final: " + error.message,"error");
+    await loadTournament(S.tournament.id);
+    status(`🏆 Final criada: ${teamDisplayName(homeTeam.name)} × ${teamDisplayName(awayTeam.name)}.`);
   }
 
   function openFinalSetup(rows) {
@@ -1053,6 +1297,11 @@
   async function createTournament() {
     if (!isAdmin() || !S.preview?.length) return;
 
+    const teamCount = S.preview.length;
+    if (teamCount !== 4 && teamCount !== 5) {
+      return status("A pelada precisa ter exatamente 4 ou 5 times.","warn");
+    }
+
     const date = $("newDate").value;
     const title = $("newTitle").value.trim() || "Pelada";
     if (!date) return status("Informe a data da pelada.","warn");
@@ -1083,7 +1332,8 @@
     const { error:playersErr } = await sb.from("players").insert(playerRows);
     if (playersErr) return status(playersErr.message,"error");
 
-    const matchRows = FIXTURES.map((pair,i) => ({
+    const fixtures = fixturesForTeamCount(teamCount);
+    const matchRows = fixtures.map((pair,i) => ({
       tournament_id:tournament.id,
       stage:"group",
       round_order:i + 1,
@@ -1103,7 +1353,7 @@
     $("pasteList").value = "";
 
     await loadTournament(tournament.id);
-    status("Pelada criada com sucesso.");
+    status(teamCount === 4 ? "Pelada criada no formato de 4 times com semifinais." : "Pelada criada no formato de 5 times com final direta.");
     showView("matches");
   }
 
