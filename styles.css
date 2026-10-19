@@ -374,3 +374,128 @@ dialog{border:0;border-radius:18px;padding:0;max-width:880px;width:calc(100% - 2
   font-size:12px;
   line-height:1.4;
 }
+
+
+/* FORMATOS 4 E 5 TIMES */
+.format-badge{
+  display:inline-flex;
+  margin-top:7px;
+  padding:5px 9px;
+  border-radius:999px;
+  background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.22);
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+.semifinal-section{
+  background:linear-gradient(180deg,#fff,#f8fbff);
+}
+.semifinal-qualify{
+  background:#f3f8ff;
+  font-weight:800;
+}
+.semifinal-qualify .position-badge{
+  background:#245fa8;
+  color:#fff;
+}
+.semifinal-tag{
+  background:#e3edf9;
+  color:#1d579a;
+}
+.semifinal-waiting{
+  margin-top:12px;
+  min-height:120px;
+  border:1px dashed #c8d7e8;
+  border-radius:14px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:6px;
+  padding:18px;
+  text-align:center;
+  color:#637078;
+}
+.semifinal-waiting strong{
+  color:#173e27;
+}
+.semifinal-waiting span{
+  max-width:560px;
+  font-size:12px;
+  line-height:1.4;
+}
+.semifinal-preview-label{
+  margin:12px 0 8px;
+  text-align:center;
+  font-size:10px;
+  font-weight:900;
+  color:#245fa8;
+  letter-spacing:.1em;
+}
+.semifinal-preview-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.semifinal-preview-card{
+  border:1px solid #d7e2ef;
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  text-align:center;
+}
+.semifinal-preview-card>span{
+  display:block;
+  margin-bottom:9px;
+  font-size:9px;
+  font-weight:900;
+  color:#245fa8;
+  letter-spacing:.08em;
+}
+.semifinal-preview-card>div{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.semifinal-preview-card b{
+  font-size:12px;
+}
+.semifinal-preview-card em{
+  font-style:normal;
+  font-size:18px;
+  font-weight:900;
+}
+.semifinal-preview-card small{
+  display:block;
+  margin-top:8px;
+  color:#738078;
+}
+.semifinal-match-list{
+  margin-top:12px;
+}
+.knockout-status{
+  margin-top:8px;
+  border-radius:10px;
+  padding:8px;
+  background:#f2f5f3;
+  text-align:center;
+  font-size:10px;
+  font-weight:900;
+  color:#66736b;
+}
+.knockout-status.winner{
+  background:#e7f5ec;
+  color:#0b5b32;
+}
+.knockout-status.tie{
+  background:#fff4d8;
+  color:#815b00;
+}
+@media(max-width:720px){
+  .semifinal-preview-grid{grid-template-columns:1fr}
+  .semifinal-preview-card{padding:10px}
+}
