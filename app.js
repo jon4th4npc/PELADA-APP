@@ -327,14 +327,43 @@
   async function login() {
     const user = $("loginUser").value;
     const password = $("loginPassword").value;
+    const email = ADMIN_EMAILS[user];
+
+    if (!email) return status("Selecione um administrador válido.", "warn");
     if (!password) return status("Digite a senha.", "warn");
 
-    const { data, error } = await sb.auth.signInWithPassword({
-      email: ADMIN_EMAILS[user],
-      password
-    });
+    let data, error;
+    try {
+      const result = await sb.auth.signInWithPassword({ email, password });
+      data = result.data;
+      error = result.error;
+    } catch (err) {
+      return status("Não foi possível conectar ao Supabase. Verifique se o projeto está ativo e tente novamente.", "error");
+    }
 
-    if (error) return status("Usuário ou senha inválidos.", "error");
+    if (error) {
+      const code = error.code || "";
+      const message = String(error.message || "").toLowerCase();
+
+      if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
+        return status("Senha incorreta ou usuário não encontrado no Supabase Auth.", "error");
+      }
+      if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+        return status("Este usuário existe, mas o e-mail ainda não está confirmado no Supabase.", "error");
+      }
+      if (code === "over_request_rate_limit" || message.includes("rate limit")) {
+        return status("Muitas tentativas de login. Aguarde um pouco e tente novamente.", "warn");
+      }
+      if (message.includes("failed to fetch") || message.includes("network")) {
+        return status("Não foi possível acessar o Supabase. Confira se o projeto está ativo.", "error");
+      }
+
+      return status(`Erro no login do Supabase: ${error.message || code || "erro desconhecido"}`, "error");
+    }
+
+    if (!data?.session) {
+      return status("O Supabase não criou uma sessão para este usuário.", "error");
+    }
 
     S.session = data.session;
     S.adminName = user;
